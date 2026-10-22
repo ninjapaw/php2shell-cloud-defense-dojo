@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "source": "https://github.com/ninjapaw/pawprint",
+  "sourceRevision": "working-tree@fa99375ec44e63b240e60fa194fc6badbb43276d",
+  "note": "Content hashes, not the base commit, identify this complete source snapshot. Publish shared-source changes alongside the consumer.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "0e155750fe02b7abc54fae77bf1c2a9a9e917a3e2685761d26c52afc57026ab5"
+    },
+    {
+      "path": "bicepconfig.json",
+      "sha256": "828cb9a7cd0a7bdb0052660183442e340b639aa8798d10f21b1588b1d04c113f"
+    },
+    {
+      "path": "scripts/github-oidc-subject.mjs",
+      "sha256": "1276a5315e40769e90033599b1e39948330a7b640b38bd1f2dbcef03b558ea1b"
+    },
+    {
+      "path": "scripts/cloudflare-dns.mjs",
+      "sha256": "54597443087c5b9ce92ed6f26ad23d2059d894761e49a8d777b923d1e4264a65"
+    },
+    {
+      "path": "modules/types.bicep",
+      "sha256": "01cd842cd8bc587b1b12cdf8af45a204e7033e53bc15501a49d715f8a75f00f7"
+    },
+    {
+      "path": "modules/monitoring/main.bicep",
+      "sha256": "ccc3ca519203b4b448aebb67925f0d6a76d62abc2f102e881139ed39ec48d644"
+    },
+    {
+      "path": "modules/front-door-waf/profile.bicep",
+      "sha256": "4e04ec97b1e58ec7ff248746599b345aa772c3bc30debda1ac5593dc4d8820ad"
+    },
+    {
+      "path": "modules/front-door-waf/main.bicep",
+      "sha256": "2ebab72c440993955e1be8772a236448d2de3ac69b3c28e5f7405b149342e49d"
+    },
+    {
+      "path": "modules/php-web-app/main.bicep",
+      "sha256": "223a7f9cda196d29fb29647ca03882614d0b11d2deb36d01925620b01b949d9e"
+    }
+  ]
+}
