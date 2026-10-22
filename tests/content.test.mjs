@@ -41,6 +41,7 @@ test("all workflows are manual-only, dev-bound, pinned, and protect credentials"
     }
     for (const job of Object.values(workflow.jobs)) {
       assert.equal(job.environment, "dev");
+      assert.equal(job["runs-on"], "ubuntu-24.04");
       const uses = job.steps.filter((step) => step.uses);
       assert.ok(uses.length >= 2);
       for (const step of uses) {
@@ -67,6 +68,38 @@ test("all workflows are manual-only, dev-bound, pinned, and protect credentials"
       if (name === "validate.yml") assert.ok(!job.permissions?.["id-token"]);
     }
   }
+});
+
+test("workflow protection checks cannot be skipped or run after Azure authentication", () => {
+  for (const name of workflows) {
+    const workflow = parseDocument(readFileSync(join(workflowDirectory, name), "utf8")).toJS();
+    for (const job of Object.values(workflow.jobs)) {
+      const guard = job.steps.findIndex((step) => step.run?.includes("scripts/check-github.mjs"));
+      const node = job.steps.findIndex((step) => step.uses?.startsWith("actions/setup-node@"));
+      assert.ok(guard > node && node >= 0, name);
+      assert.equal(job.steps[guard].if, undefined, name);
+      assert.equal(job.steps[guard].env.GITHUB_TOKEN, "${{ github.token }}");
+      assert.match(job.steps[guard].run, /--environment "\$DOJO_ENV"/);
+      const login = job.steps.findIndex((step) => step.uses?.startsWith("azure/login@"));
+      assert.ok(login === -1 || guard < login, name);
+      assert.ok(!Object.hasOwn(job.env, "GITHUB_TOKEN"), "The API token must remain step-scoped.");
+    }
+  }
+});
+
+test("validation explicitly covers both supported PHP branches with a pinned runtime setup", () => {
+  const workflow = parseDocument(readFileSync(join(workflowDirectory, "validate.yml"), "utf8")).toJS();
+  const job = workflow.jobs.validate;
+  assert.deepEqual(job.strategy.matrix.php, ["8.4", "8.5"]);
+  assert.equal(job.strategy["fail-fast"], false);
+  const index = job.steps.findIndex((step) => step.uses?.startsWith("shivammathur/setup-php@"));
+  assert.ok(index >= 0);
+  assert.equal(job.steps[index].uses, "shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962");
+  assert.equal(job.steps[index].with["php-version"], "${{ matrix.php }}");
+  assert.equal(job.steps[index].with.coverage, "none");
+  assert.equal(job.steps[index].with.tools, "none");
+  assert.ok(index > job.steps.findIndex((step) => step.run?.includes("scripts/check-github.mjs")));
+  assert.ok(index < job.steps.findIndex((step) => step.run?.includes("npm test")));
 });
 
 test("simulation has no target input, and teardown passes typed confirmation without a bypass", () => {

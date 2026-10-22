@@ -19,9 +19,14 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    name: Validate PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
     environment: dev
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.4", "8.5"]
     env:
       DOJO_ENV: ${{ inputs.environment }}
     steps:
@@ -32,6 +37,15 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      - name: Verify GitHub environment protections (read-only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-github.mjs --environment "$DOJO_ENV"
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
       - name: Install locked test dependency
         run: npm ci
       - name: Validate workflow semantics

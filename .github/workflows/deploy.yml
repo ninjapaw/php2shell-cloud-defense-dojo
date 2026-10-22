@@ -37,7 +37,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: dev
     timeout-minutes: 60
     permissions:
@@ -62,6 +62,10 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version-file: .node-version
+      - name: Verify GitHub environment protections (read-only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-github.mjs --environment "$DOJO_ENV"
       - name: Use ephemeral Azure CLI configuration
         run: |
           set -euo pipefail

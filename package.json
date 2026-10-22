@@ -15,6 +15,7 @@
     "prepare:products": "node scripts/prepare-products.mjs",
     "plan": "node scripts/dojo.mjs plan",
     "doctor": "node scripts/dojo.mjs doctor",
+    "github:check": "node scripts/check-github.mjs",
     "vendor:check": "node scripts/check-vendor.mjs",
     "infra:check": "node scripts/check-infra.mjs"
   },
