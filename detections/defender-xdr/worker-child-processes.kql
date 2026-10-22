@@ -1,0 +1,22 @@
+// Defender XDR: requires supported MDE process telemetry; not emitted by this lab.
+// Legitimate composer, image, mail and deployment activity needs contextual review.
+// In-worker execution has no child process; no match is not proof of safety.
+let WorkerPattern = @"(?i)^(php(?:[0-9.]*-?fpm[0-9.]*|-cgi|[0-9.]*)?(?:\.exe)?|lsphp[0-9.]*|apache2?(?:\.exe)?|httpd(?:\.exe)?|w3wp\.exe|nginx|litespeed|lshttpd|frankenphp)$";
+DeviceProcessEvents
+| where Timestamp between (ago(30d) .. now())
+| where InitiatingProcessFileName matches regex WorkerPattern
+| extend Child = tolower(FileName)
+| extend Category = case(
+    Child in ("sh", "bash", "dash", "ash", "zsh", "ksh", "csh", "cmd.exe", "powershell.exe", "pwsh", "pwsh.exe"), "shell",
+    Child matches regex @"^(python[0-9.]*|perl|ruby|node|lua)(\.exe)?$", "interpreter",
+    Child in ("curl", "wget", "nc", "ncat", "netcat", "socat", "busybox", "tftp", "certutil.exe", "bitsadmin.exe", "mshta.exe", "rundll32.exe", "regsvr32.exe"), "network-or-system-tool",
+    Child in ("whoami", "id", "uname", "hostname", "ifconfig", "ipconfig", "ip", "netstat", "ss", "ps", "env", "cat", "ls", "find", "net.exe", "net1.exe", "systeminfo", "tasklist", "nltest.exe"), "discovery-tool",
+    "")
+| where isnotempty(Category)
+| extend SuspiciousCommandShape = ProcessCommandLine matches regex @"(?i)(/dev/(tcp|udp)/|mkfifo|encodedcommand|downloadstring|fsockopen)"
+| extend Priority = iff(SuspiciousCommandShape, 1, 2)
+| project Timestamp, DeviceId, DeviceName, ReportId, Priority, Category,
+    ParentWorker = InitiatingProcessFileName, ChildProcess = FileName,
+    ProcessCommandLine, AccountName, SuspiciousCommandShape,
+    EvidenceKind = "observed-worker-child-review-required"
+| order by Priority asc, Timestamp desc

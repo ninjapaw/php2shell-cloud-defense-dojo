@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/cseelhoff-ms/php2shell-hunting-pack",
+    "revision": "15baae8d25e631ac2223f904f4d0a0f4cf08d703",
+    "reviewedAt": "2026-10-22",
+    "relationship": "Independently authored coverage; upstream queries, scripts and NCSC data are not vendored.",
+    "advisories": [
+      "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w",
+      "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"
+    ]
+  },
+  "queries": [
+    {
+      "id": "lab-waf", "path": "detections/waf-requests.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["AzureDiagnostics"],
+      "columns": ["TimeGenerated", "RunId", "ResourceId", "ClientIp", "Hostname", "Action", "RuleName", "TrackingReference", "RequestUri", "EvidenceKind"],
+      "labTelemetry": "Real Front Door records after diagnostics ingestion; benign marker only.", "references": []
+    },
+    {
+      "id": "lab-php-errors", "path": "detections/php-errors.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["AppServiceConsoleLogs", "AppServiceAppLogs"],
+      "columns": ["TimeGenerated", "RunId", "Synthetic", "ResourceId", "Hostname", "ClientIp", "Identity", "Message", "EvidenceKind"],
+      "labTelemetry": "Synthetic examples are labelled separately from actual PHP log messages.", "references": []
+    },
+    {
+      "id": "lab-child-process", "path": "detections/unexpected-child-process.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["DeviceProcessEvents", "AppServiceConsoleLogs"],
+      "columns": ["TimeGenerated", "RunId", "Synthetic", "ParentProcess", "ChildProcess", "Hostname", "DeviceId", "ResourceId", "ClientIp", "Identity", "EvidenceKind"],
+      "labTelemetry": "Synthetic app logs only; MDE records require a separately supported workload/ingestion path.", "references": []
+    },
+    {
+      "id": "lab-outbound", "path": "detections/unexpected-outbound.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["DeviceNetworkEvents", "AppServiceConsoleLogs"],
+      "columns": ["TimeGenerated", "RunId", "Synthetic", "Process", "Hostname", "DeviceId", "ResourceId", "Identity", "ClientIp", "RemoteIp", "RemotePort", "EvidenceKind"],
+      "labTelemetry": "Synthetic app logs only; no outbound connection is made.", "references": []
+    },
+    {
+      "id": "lab-canary", "path": "detections/canary-access.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["AppServiceConsoleLogs"],
+      "columns": ["RunId", "ResourceId", "RequestAt", "CanaryAt", "CanaryIds", "Identities", "ClientIps", "Hostnames", "TimeGenerated", "RequestBeforeCanary", "EvidenceKind"],
+      "labTelemetry": "Fabricated constant fixture, not Azure data-plane access.", "references": []
+    },
+    {
+      "id": "lab-correlation", "path": "detections/correlation.kql", "platform": "lab-workspace",
+      "requiredTables": [], "optionalTables": ["AzureDiagnostics", "AppServiceConsoleLogs", "SecurityRecommendation"],
+      "columns": ["TimeGenerated", "RunId", "AppResourceId", "FirstSeen", "LastSeen", "SyntheticSignals", "WafEvents", "WafActions", "WafResourceIds", "Hostnames", "ClientIps", "Identities", "PhpAssessmentRows", "ExposureAssessmentRows", "AssessmentNamesToReview", "EvidenceKind"],
+      "labTelemetry": "Real WAF plus multiple synthetic signals; posture export is not configured.", "references": []
+    },
+    {
+      "id": "tvm-exposure", "path": "detections/defender-xdr/tvm-exposure.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareVulnerabilities"], "optionalTables": [],
+      "columns": ["DeviceId", "DeviceName", "OSPlatform", "SoftwareName", "SoftwareVersion", "CveId", "RecommendedSecurityUpdate", "EvidenceKind"],
+      "labTelemetry": "Not provided: Defender XDR TVM onboarding and published CVE detection required.",
+      "references": ["queries/defender-xdr/row01-tvm-cve-exposure.kql"]
+    },
+    {
+      "id": "php-inventory", "path": "detections/defender-xdr/php-inventory.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareInventory"], "optionalTables": [],
+      "columns": ["DeviceId", "DeviceName", "OSPlatform", "SoftwareVendor", "SoftwareName", "SoftwareVersion", "RuntimeRole", "RuntimeVersion", "FixedVersion", "VendorPackaged", "ReviewStatus", "EvidenceKind"],
+      "labTelemetry": "Not provided: MDE software inventory required.",
+      "references": ["queries/defender-xdr/row05-php-inventory-version-check.kql"]
+    },
+    {
+      "id": "software-discovery", "path": "detections/defender-xdr/software-discovery.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareInventory", "DeviceProcessEvents"], "optionalTables": [],
+      "columns": ["SoftwareVendor", "SoftwareName", "DiscoveryReason", "Devices", "Versions", "SampleDevices", "EvidenceKind"],
+      "labTelemetry": "Not provided: inventory plus supported MDE process observations required.",
+      "references": ["queries/defender-xdr/row05-php-inventory-version-check.kql"]
+    },
+    {
+      "id": "php-binary-evidence", "path": "detections/defender-xdr/php-binary-evidence.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareEvidenceBeta", "DeviceInfo"], "optionalTables": [],
+      "columns": ["DeviceId", "DeviceName", "OSPlatform", "SoftwareVendor", "SoftwareName", "SoftwareVersion", "DiskPath", "LastSeenTime", "EvidenceKind"],
+      "labTelemetry": "Not provided: recognized TVM software evidence; beta schema needs live verification.",
+      "references": ["queries/defender-xdr/row08-php-binaries-on-disk.kql"]
+    },
+    {
+      "id": "bundled-products", "path": "detections/defender-xdr/bundled-products.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareInventory"], "optionalTables": [],
+      "columns": ["DeviceId", "DeviceName", "SoftwareVendor", "SoftwareName", "SoftwareVersion", "Keyword", "Product", "Status109618", "Status109619", "Source", "EvidenceKind"],
+      "operatorInput": "Reviewed local NCSC/vendor product rows; run npm run prepare:products -- --input <reviewed.json>.",
+      "labTelemetry": "Not provided: TVM inventory and explicitly reviewed product input required.",
+      "references": ["queries/defender-xdr/row08-ncsc-products-in-inventory.kql"]
+    },
+    {
+      "id": "worker-classification", "path": "detections/defender-xdr/worker-classification.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceTvmSoftwareInventory", "DeviceProcessEvents"], "optionalTables": [],
+      "columns": ["DeviceId", "DeviceName", "Priority", "Classification", "ModPhpPackages", "WorkerBinaries", "LastProcessStart", "EvidenceKind"],
+      "labTelemetry": "Not provided: supported MDE telemetry and inventory required.",
+      "references": ["queries/defender-xdr/row09-running-php-vs-mod-php.kql"]
+    },
+    {
+      "id": "worker-discovery", "path": "detections/defender-xdr/worker-discovery.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceProcessEvents", "DeviceNetworkEvents"], "optionalTables": [],
+      "columns": ["DiscoveryKind", "Process", "Events", "Devices", "LastSeen", "SampleDevices", "EvidenceKind"],
+      "labTelemetry": "Not provided: process and OS-dependent inbound-network telemetry required.",
+      "references": ["queries/defender-xdr/row09-running-php-vs-mod-php.kql"]
+    },
+    {
+      "id": "worker-baseline", "path": "detections/defender-xdr/worker-baseline.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceProcessEvents"], "optionalTables": [],
+      "columns": ["ParentWorker", "ChildProcess", "Executions", "Devices", "LastSeen", "EvidenceKind"],
+      "labTelemetry": "Not provided: supported MDE process telemetry required.",
+      "references": ["queries/defender-xdr/huntB-web-worker-spawns-shell.kql"]
+    },
+    {
+      "id": "worker-child-processes", "path": "detections/defender-xdr/worker-child-processes.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceProcessEvents"], "optionalTables": [],
+      "columns": ["Timestamp", "DeviceId", "DeviceName", "ReportId", "Priority", "Category", "ParentWorker", "ChildProcess", "ProcessCommandLine", "AccountName", "SuspiciousCommandShape", "EvidenceKind"],
+      "labTelemetry": "Not provided: real MDE child-process events required; never generated by the simulator.",
+      "references": ["queries/defender-xdr/huntB-web-worker-spawns-shell.kql"]
+    },
+    {
+      "id": "php-file-drops", "path": "detections/defender-xdr/php-file-drops.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceFileEvents"], "optionalTables": [],
+      "columns": ["Timestamp", "DeviceId", "DeviceName", "ReportId", "FolderPath", "FileName", "Writer", "SHA1", "DeletedWithin10Min", "EvidenceKind"],
+      "labTelemetry": "Not provided: real MDE file events required; no files are dropped by the simulator.",
+      "references": ["queries/defender-xdr/huntE1-php-file-drops.kql"]
+    },
+    {
+      "id": "worker-network", "path": "detections/defender-xdr/worker-network.kql", "platform": "defender-xdr",
+      "requiredTables": ["DeviceNetworkEvents"], "optionalTables": [],
+      "columns": ["Timestamp", "DeviceId", "DeviceName", "ReportId", "Signal", "Process", "ParentWorker", "RemoteIP", "RemotePort", "RemoteUrl", "ActionType", "EvidenceKind"],
+      "labTelemetry": "Not provided: real MDE network events required; no egress is simulated.",
+      "references": ["queries/defender-xdr/huntE2-web-worker-network.kql"]
+    },
+    {
+      "id": "php-assessments", "path": "detections/resource-graph/php-assessments.kql", "platform": "resource-graph",
+      "requiredTables": ["securityresources"], "optionalTables": [],
+      "columns": ["AssessmentId", "subscriptionId", "resourceGroup", "ResourceId", "DisplayName", "Status", "AssessmentTime", "EvidenceKind"],
+      "labTelemetry": "Optional actual posture assessments; discovery and coverage are not guaranteed.",
+      "references": ["docs/detailed-guide.md"]
+    },
+    {
+      "id": "appservice-runtimes", "path": "detections/resource-graph/appservice-runtimes.kql", "platform": "resource-graph",
+      "requiredTables": ["resources"], "optionalTables": [],
+      "columns": ["ResourceId", "AppName", "subscriptionId", "resourceGroup", "location", "Runtime", "CandidateKind", "DefaultHostName", "ReviewStatus", "EvidenceKind"],
+      "labTelemetry": "Lab resource configuration is available; effective patch version is not established by Resource Graph.",
+      "references": ["queries/resource-graph/row03-appservice-php-runtimes.kql"]
+    },
+    {
+      "id": "appservice-runtime-discovery", "path": "detections/resource-graph/appservice-runtime-discovery.kql", "platform": "resource-graph",
+      "requiredTables": ["resources"], "optionalTables": [],
+      "columns": ["Runtime", "Apps", "SampleResourceIds", "EvidenceKind"],
+      "labTelemetry": "Read-only inventory within the operator's approved Resource Graph scope.",
+      "references": ["queries/resource-graph/row03-appservice-php-runtimes.kql"]
+    },
+    {
+      "id": "container-cve-findings", "path": "detections/resource-graph/container-cve-findings.kql", "platform": "resource-graph",
+      "requiredTables": ["securityresources"], "optionalTables": [],
+      "columns": ["AssessmentId", "RegistryId", "subscriptionId", "resourceGroup", "Repository", "ImageDigest", "VulnerabilityId", "DisplayName", "Status", "Severity", "EvidenceKind"],
+      "labTelemetry": "Not provided: registry/container assessment coverage and CVE logic required.",
+      "references": ["queries/resource-graph/row04a-acr-subassessments-cve.kql"]
+    },
+    {
+      "id": "container-php-findings", "path": "detections/resource-graph/container-php-findings.kql", "platform": "resource-graph",
+      "requiredTables": ["securityresources"], "optionalTables": [],
+      "columns": ["RegistryId", "Repository", "ImageDigest", "subscriptionId", "resourceGroup", "FindingRows", "SampleAssessmentIds", "EvidenceKind"],
+      "labTelemetry": "Not provided: registry findings required; zero-finding images need independent SBOM inventory.",
+      "references": ["queries/resource-graph/row04b-acr-images-with-php-findings.kql"]
+    },
+    {
+      "id": "syslog-worker-failures", "path": "detections/sentinel-log-analytics/syslog-worker-failures.kql", "platform": "sentinel-log-analytics",
+      "requiredTables": ["Syslog"], "optionalTables": [],
+      "columns": ["TimeGenerated", "ResourceId", "Computer", "Signal", "Events", "FirstSeen", "LastSeen", "IsBurst", "EvidenceKind"],
+      "labTelemetry": "Not provided: supported Linux host, AMA and a Syslog DCR required.",
+      "references": ["queries/sentinel-log-analytics/huntC-syslog-crash-oom.kql"]
+    },
+    {
+      "id": "appservice-http", "path": "detections/sentinel-log-analytics/appservice-http.kql", "platform": "sentinel-log-analytics",
+      "requiredTables": ["AppServiceHTTPLogs"], "optionalTables": [],
+      "columns": ["TimeGenerated", "ResourceId", "Hostname", "ClientIp", "Signal", "Events", "Errors", "MaxRequestBytes", "MaxRequestCookieLength", "SessionPosts", "Uris", "EvidenceKind"],
+      "labTelemetry": "Real HTTP diagnostics after ingestion; harmless GET simulation is not an expected hunt hit.",
+      "references": ["queries/sentinel-log-analytics/huntD1-appservice-http.kql"]
+    },
+    {
+      "id": "appgateway-waf", "path": "detections/sentinel-log-analytics/appgateway-waf.kql", "platform": "sentinel-log-analytics",
+      "requiredTables": ["AGWAccessLogs", "AGWFirewallLogs"], "optionalTables": [],
+      "columns": ["TimeGenerated", "ResourceId", "Hostname", "ClientIp", "Signal", "Events", "BackendErrors", "MaxRequestBytes", "RuleId", "WafAction", "TransactionId", "EvidenceKind"],
+      "labTelemetry": "Not provided: this lab uses Front Door, not Application Gateway.",
+      "references": ["queries/sentinel-log-analytics/huntD2-appgw-waf.kql"]
+    },
+    {
+      "id": "container-worker-errors", "path": "detections/sentinel-log-analytics/container-worker-errors.kql", "platform": "sentinel-log-analytics",
+      "requiredTables": ["ContainerLogV2"], "optionalTables": [],
+      "columns": ["TimeGenerated", "ResourceId", "PodNamespace", "PodName", "Signal", "Events", "Containers", "FirstSeen", "LastSeen", "EvidenceKind"],
+      "labTelemetry": "Not provided: AKS Container Insights and actual stderr/stdout logging required.",
+      "references": ["queries/sentinel-log-analytics/huntF1-aks-containerlogv2.kql"]
+    },
+    {
+      "id": "web-text-logs", "path": "detections/sentinel-log-analytics/web-text-logs.kql", "platform": "sentinel-log-analytics",
+      "requiredTables": ["WebErrorLog_CL", "WebAccessLog_CL"], "optionalTables": [],
+      "columns": ["TimeGenerated", "ResourceId", "Computer", "ClientIp", "Signal", "Events", "MultipartErrors", "ChunkedMultipart", "LargeResponseCookieFlags", "UnknownResponseCookie", "MaxRequestBytes", "ParseErrors", "EvidenceKind"],
+      "labTelemetry": "Not provided: custom tables, AMA DCR and privacy-preserving access-log format required.",
+      "references": ["queries/sentinel-log-analytics/huntF2-apache-nginx-textlogs.kql"]
+    }
+  ],
+  "coverage": [
+    {
+      "id": "row-01", "title": "Defender TVM CVE exposure", "queryIds": ["tvm-exposure"],
+      "runbook": "docs/hunting-pack.md#row-01", "requires": ["TVM inventory and published CVE detection"],
+      "evaluation": ["Record actual CVE/device rows and collection scope.", "If empty or unpublished, continue inventory, bundled-product and worker discovery; never pass as safe."]
+    },
+    {
+      "id": "row-02", "title": "Defender for Cloud VM and running-container posture", "queryIds": ["php-assessments"],
+      "runbook": "docs/hunting-pack.md#row-02", "requires": ["Applicable Defender plan, permissions and actual assessment coverage"],
+      "evaluation": ["Inspect real assessment status, resource identity, affected package and advisory.", "Review available Cloud Security Explorer and attack-path evidence without inventing relationships."]
+    },
+    {
+      "id": "row-03", "title": "App Service and Function runtime discovery", "queryIds": ["appservice-runtimes", "appservice-runtime-discovery"],
+      "runbook": "docs/hunting-pack.md#row-03", "requires": ["Approved Resource Graph scope; per-app configuration read if fields are missing"],
+      "evaluation": ["Review all runtime strings and empty configuration, including slots and custom containers.", "Verify the effective patch level separately; major.minor configuration never proves a patch."]
+    },
+    {
+      "id": "row-04", "title": "Registry, running-image and zero-finding SBOM inventory", "queryIds": ["container-cve-findings", "container-php-findings"],
+      "runbook": "docs/hunting-pack.md#row-04", "requires": ["Registry assessment coverage and separately authorized image/SBOM access"],
+      "evaluation": ["Correlate actual findings by registry, repository and immutable digest.", "Manually inventory deployed image digests and inspect SBOMs, including source-built PHP and zero-finding images.", "Do not execute an untrusted image or suppress SBOM/pull failures."]
+    },
+    {
+      "id": "row-05", "title": "MDE inventory, fixed-version and distinct-software review", "queryIds": ["php-inventory", "software-discovery"],
+      "runbook": "docs/hunting-pack.md#row-05", "requires": ["MDE software inventory and supported process telemetry for host discovery"],
+      "evaluation": ["Compare runtime, not application, versions to the correct upstream branch.", "Review vendor backports, prereleases, unparsed and unsupported branches manually.", "Review distinct PHP names and all packages on observed web hosts for unlisted stacks."]
+    },
+    {
+      "id": "row-06", "title": "Defender EASM external exposure", "queryIds": [], "manualOnly": true,
+      "runbook": "docs/hunting-pack.md#row-06", "requires": ["Authorized EASM inventory export"],
+      "evaluation": ["Review approved/live PHP frameworks, web servers, PHP-based components and IP banners.", "Review distinct frameworks, components and server values beyond fixed keyword lists.", "Preserve asset identity and export time; hidden PHP and internal assets remain gaps."]
+    },
+    {
+      "id": "row-07", "title": "Code search and DevOps ownership mapping", "queryIds": [], "manualOnly": true,
+      "runbook": "docs/hunting-pack.md#row-07", "requires": ["Explicit repository scope and authorized code-search/DevOps access"],
+      "evaluation": ["Search PHP base images, package installs, Compose/Kubernetes and composer.json.", "Review distinct repositories and map image digest to repository, pipeline and accountable owner.", "Record search caps and inaccessible repositories; DevOps mapping is not free-text search."]
+    },
+    {
+      "id": "row-08", "title": "Bundled PHP binaries and reviewed NCSC product leads", "queryIds": ["php-binary-evidence", "bundled-products"],
+      "runbook": "docs/hunting-pack.md#row-08", "requires": ["TVM software evidence and reviewed local NCSC/vendor product rows"],
+      "evaluation": ["Prepare nonempty local product input and preserve feed revision/date, source and advisory status.", "Treat product-name matches and beta disk evidence as leads; confirm the actual serving runtime.", "Inventory gaps, stale feed entries and an empty product template cannot pass as completed coverage."]
+    },
+    {
+      "id": "row-09", "title": "Worker observations, mod_php proxy and unknown launchers", "queryIds": ["worker-classification", "worker-discovery"],
+      "runbook": "docs/hunting-pack.md#row-09", "requires": ["MDE inventory, process starts and supported inbound network observations"],
+      "evaluation": ["Prioritize Apache plus module-package observations without claiming the module is loaded.", "Retain installed-but-quiet hosts and review unfamiliar PHP launchers/inbound processes.", "Check long-lived workers outside retention; no recent start does not mean stopped or absent."]
+    },
+    {
+      "id": "row-10", "title": "Optional authorized network fingerprint gap review", "queryIds": [], "manualOnly": true,
+      "runbook": "docs/hunting-pack.md#row-10", "requires": ["Separate written scan scope, approved scanner/network reachability and SOC coordination"],
+      "evaluation": ["Review separately collected approved fingerprints and distinct technologies/server banners.", "Confirm leads with runtime/inventory evidence; absent PHP headers are not clearance.", "No scanner, arbitrary target or exploit is run by this dojo."]
+    },
+    {
+      "id": "hunt-A", "title": "Prioritize exposed high-risk worker candidates", "queryIds": [], "manualOnly": true,
+      "runbook": "docs/hunting-pack.md#hunt-a", "requires": ["Row 09 classification and Row 06 approved/live exposure export"],
+      "evaluation": ["Cross-match stable asset/owner identifiers, not hostname similarity alone.", "Prioritize class 1/2 exposed candidates and retain unmatched/uncertain mappings for review."]
+    },
+    {
+      "id": "hunt-B", "title": "Web worker children and legitimate baseline", "queryIds": ["worker-child-processes", "worker-baseline"],
+      "runbook": "docs/hunting-pack.md#hunt-b", "requires": ["Supported MDE process telemetry and reviewed worker-name discovery"],
+      "evaluation": ["Review shell, interpreter, downloader and discovery children with owner-approved baselines.", "Validate shared worker-name coverage after discovery; in-worker execution remains a blind spot."]
+    },
+    {
+      "id": "hunt-C", "title": "Syslog crashes, OOM and worker churn", "queryIds": ["syslog-worker-failures"],
+      "runbook": "docs/hunting-pack.md#hunt-c", "requires": ["Linux AMA, Syslog DCR and actual application error routing"],
+      "evaluation": ["Verify collection by host, facility and severity before interpreting results.", "Review crash/memory/churn events and five-event 10-minute bins against health/load baselines."]
+    },
+    {
+      "id": "hunt-D1", "title": "App Service HTTP error, session and cookie leads", "queryIds": ["appservice-http"],
+      "runbook": "docs/hunting-pack.md#hunt-d1", "requires": ["AppServiceHTTPLogs in the intended workspace"],
+      "evaluation": ["Review five 5xx POSTs plus request size over 100000 bytes per five-minute resource/host/client bin.", "Review short POST/session/error clusters and request-cookie length over 1000.", "Do not infer Content-Type, response cookies or an ordered exploit from these fields."]
+    },
+    {
+      "id": "hunt-D2", "title": "Application Gateway WAF and backend correlation", "queryIds": ["appgateway-waf"],
+      "runbook": "docs/hunting-pack.md#hunt-d2", "requires": ["Resource-specific AGWAccessLogs and AGWFirewallLogs, not Front Door logs"],
+      "evaluation": ["Review POST/backend-error bursts and generic request-body/multipart rule leads.", "Verify deployed ruleset mappings and correlate only nonempty transaction IDs within one gateway.", "An unjoined firewall event does not establish backend success or failure."]
+    },
+    {
+      "id": "hunt-E1", "title": "PHP file writes and rapid deletion", "queryIds": ["php-file-drops"],
+      "runbook": "docs/hunting-pack.md#hunt-e1", "requires": ["Supported MDE file telemetry"],
+      "evaluation": ["Review worker/temp-path PHP-family writes and deletion within the inclusive following 10 minutes.", "Check device, full path, hash and timestamps; CMS updates and path reuse are alternative explanations."]
+    },
+    {
+      "id": "hunt-E2", "title": "Worker and child-tool public network activity", "queryIds": ["worker-network"],
+      "runbook": "docs/hunting-pack.md#hunt-e2", "requires": ["Supported MDE network telemetry"],
+      "evaluation": ["Review direct workers on unusual public ports and child tools on any public port including 80/443.", "Review excluded common-port direct traffic and private/unknown IP-type destinations separately."]
+    },
+    {
+      "id": "hunt-F1", "title": "AKS ContainerLogV2 worker errors", "queryIds": ["container-worker-errors"],
+      "runbook": "docs/hunting-pack.md#hunt-f1", "requires": ["Container Insights V2 and actual PHP/FPM stdout/stderr output"],
+      "evaluation": ["Verify namespace, pod, container and resource coverage and worker-output configuration.", "Review memory, timeout, signal/churn and session diagnostics as leads, not exploitation proof."]
+    },
+    {
+      "id": "hunt-F2", "title": "Custom web error and privacy-preserving access logs", "queryIds": ["web-text-logs"],
+      "runbook": "docs/hunting-pack.md#hunt-f2", "requires": ["Custom WebErrorLog_CL/WebAccessLog_CL tables, AMA DCR and the documented access format"],
+      "evaluation": ["Verify collection identity, nine-field parsing and explicit malformed-record counts.", "Review multipart errors, chunked multipart and response-cookie size flags without collecting cookie values.", "A '-' cookie flag is unobserved, not a negative result."]
+    },
+    {
+      "id": "hunt-G", "title": "Patch, partial mitigations and closure evidence", "queryIds": [], "manualOnly": true,
+      "runbook": "docs/hunting-pack.md#hunt-g", "requires": ["Verified PHP/vendor advisories, authorized change owner and effective web-SAPI configuration"],
+      "evaluation": ["Verify the deployed vendor build or image digest contains the correct patch and restart all workers.", "Review session upload-progress, PHP 8.5 backtraces, decoded-body limits and advisory mitigation trade-offs; do not blindly remove memory limits.", "Never use RLIMIT_AS/RLIMIT_DATA as this mitigation; WAF markers and synthetic remediation do not close a real CVE."]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+// Defender XDR: baseline legitimate children before tuning the worker hunts.
+// Repeated patterns are not automatically benign. Review app owners and changes.
+let WorkerPattern = @"(?i)^(php(?:[0-9.]*-?fpm[0-9.]*|-cgi|[0-9.]*)?(?:\.exe)?|lsphp[0-9.]*|apache2?(?:\.exe)?|httpd(?:\.exe)?|w3wp\.exe|nginx|litespeed|lshttpd|frankenphp)$";
+DeviceProcessEvents
+| where Timestamp between (ago(30d) .. now())
+| where InitiatingProcessFileName matches regex WorkerPattern
+| summarize Executions = count(), Devices = dcount(DeviceId), LastSeen = max(Timestamp)
+    by ParentWorker = InitiatingProcessFileName, ChildProcess = FileName
+| project ParentWorker, ChildProcess, Executions, Devices, LastSeen,
+    EvidenceKind = "observed-worker-child-baseline"

@@ -1,0 +1,13 @@
+// Defender XDR: beta TVM evidence schema may change; only recognized software appears.
+// Disk evidence is not an exhaustive filesystem scan or proof a module is loaded.
+DeviceTvmSoftwareEvidenceBeta
+| mv-expand DiskPath = DiskPaths to typeof(string)
+| where DiskPath matches regex @"(?i)([/\\]php([0-9.]*|[0-9.]*-?fpm|[0-9.]*-cgi)(\.exe)?$|libphp[0-9.]*\.so|php[0-9]*(ts|apache2[_0-9]*)?\.dll)"
+| join kind=leftouter (
+    DeviceInfo
+    | where Timestamp between (ago(30d) .. now())
+    | summarize arg_max(Timestamp, DeviceName, OSPlatform) by DeviceId
+) on DeviceId
+| project DeviceId, DeviceName, OSPlatform, SoftwareVendor, SoftwareName,
+    SoftwareVersion, DiskPath, LastSeenTime,
+    EvidenceKind = "recognized-software-disk-evidence-not-loaded-proof"

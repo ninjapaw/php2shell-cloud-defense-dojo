@@ -1,0 +1,49 @@
+// Available sources: AzureDiagnostics, AppServiceConsoleLogs.
+// Optional exported posture source: SecurityRecommendation (not enabled here).
+// All tables are optional at query resolution; an empty workspace returns no rows.
+// Replace __APP_RESOURCE_ID__ for hunting; Bicep substitutes it for analytics.
+// Posture counts are assessment rows to REVIEW, not verified vulnerability/exposure.
+// Synthetic process/egress/canary logs are not actual runtime telemetry or compromise.
+let AppResourceId = "__APP_RESOURCE_ID__";
+let RunIdFilter = "";
+let Empty = datatable(TimeGenerated:datetime)[];
+let Sources = union isfuzzy=true withsource=SourceTable Empty, AzureDiagnostics, AppServiceConsoleLogs, SecurityRecommendation
+    | where TimeGenerated between (ago(1h) .. now());
+let AppEvents = Sources
+    | where SourceTable endswith "AppServiceConsoleLogs"
+    | extend Event = parse_json(extract(@"DOJO_EVENT (\{.*\})", 1, tostring(column_ifexists("ResultDescription", ""))))
+    | where tobool(Event.synthetic) == true and tostring(Event.resourceId) =~ AppResourceId
+    | extend RunId = tostring(Event.runId)
+    | where isnotempty(RunId) and (isempty(RunIdFilter) or RunId == RunIdFilter)
+    | summarize FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated),
+        LastIngested = max(ingestion_time()), SyntheticSignals = make_set(tostring(Event.signal)),
+        Hostnames = make_set(tostring(Event.hostname)), ClientIps = make_set(tostring(Event.clientIp)),
+        Identities = make_set(tostring(Event.identity)) by RunId
+    | where array_length(SyntheticSignals) >= 2;
+let Waf = Sources
+    | where tostring(column_ifexists("Category", "")) == "FrontDoorWebApplicationFirewallLog"
+    | extend RequestUri = tostring(column_ifexists("requestUri_s", ""))
+    | where RequestUri contains "dojoProbe=waf-marker"
+    | extend RunId = extract(@"[?&]runId=([0-9a-f-]{36})", 1, RequestUri)
+    | where isnotempty(RunId)
+    | summarize WafEvents = count(), WafActions = make_set(tostring(column_ifexists("action_s", ""))),
+        WafResourceIds = make_set(tostring(column_ifexists("_ResourceId", ""))) by RunId;
+let Posture = Sources
+    | where SourceTable endswith "SecurityRecommendation"
+    | extend AssessmentResource = tostring(column_ifexists("AssessedResourceId", "")),
+        AssessmentText = tostring(column_ifexists("RecommendationDisplayName", ""))
+    | where AssessmentResource =~ AppResourceId
+    | summarize PhpAssessmentRows = countif(AssessmentText contains "PHP"
+            or AssessmentText contains "CVE-2026-109618" or AssessmentText contains "CVE-2026-109619"),
+        ExposureAssessmentRows = countif(AssessmentText has_any ("public", "internet")),
+        AssessmentNamesToReview = make_set(AssessmentText)
+    | extend JoinKey = 1;
+AppEvents
+| join kind=inner Waf on RunId
+| extend JoinKey = 1
+| join kind=leftouter Posture on JoinKey
+| where LastIngested > ago(15m)
+| project TimeGenerated = LastSeen, RunId, AppResourceId,
+    FirstSeen, LastSeen, SyntheticSignals, WafEvents, WafActions, WafResourceIds,
+    Hostnames, ClientIps, Identities, PhpAssessmentRows, ExposureAssessmentRows,
+    AssessmentNamesToReview, EvidenceKind = "synthetic-training-correlation-not-compromise"

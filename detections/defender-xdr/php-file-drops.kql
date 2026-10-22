@@ -1,0 +1,21 @@
+// Defender XDR: requires MDE file telemetry; CMS/plugin/cache writes cause noise.
+// A path-based create/delete association is a lead, not proof of file execution.
+let WorkerPattern = @"(?i)^(php(?:[0-9.]*-?fpm[0-9.]*|-cgi|[0-9.]*)?(?:\.exe)?|lsphp[0-9.]*|apache2?(?:\.exe)?|httpd(?:\.exe)?|w3wp\.exe|nginx|litespeed|lshttpd|frankenphp)$";
+let Writes = DeviceFileEvents
+    | where Timestamp between (ago(30d) .. now())
+    | where ActionType in ("FileCreated", "FileModified", "FileRenamed")
+    | where FileName matches regex @"(?i)\.(php[3-8]?|phtml|pht|phar|inc)$"
+    | where InitiatingProcessFileName matches regex WorkerPattern
+        or FolderPath matches regex @"(?i)(^/(tmp|var/tmp|dev/shm)/|\\temp\\)"
+    | project CreatedAt = Timestamp, DeviceId, DeviceName, ReportId, FolderPath,
+        FileName, Writer = InitiatingProcessFileName, SHA1;
+let Deletes = DeviceFileEvents
+    | where Timestamp between (ago(30d) .. now()) and ActionType == "FileDeleted"
+    | project DeletedAt = Timestamp, DeviceId, FolderPath, FileName;
+Writes
+| join kind=leftouter Deletes on DeviceId, FolderPath, FileName
+| summarize RapidDelete = max(toint(isnotnull(DeletedAt) and DeletedAt between (CreatedAt .. (CreatedAt + 10m))))
+    by Timestamp = CreatedAt, DeviceId, DeviceName, ReportId, FolderPath, FileName, Writer, SHA1
+| project Timestamp, DeviceId, DeviceName, ReportId, FolderPath, FileName, Writer,
+    SHA1, DeletedWithin10Min = RapidDelete == 1,
+    EvidenceKind = "observed-php-file-lifecycle-review-required"

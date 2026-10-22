@@ -1,0 +1,15 @@
+// Defender XDR: populate reviewed NCSC/vendor product rows with prepare-products.mjs.
+// Empty input returns no leads, NOT a completed product review. No remote feed runs.
+// Scope inventory to approved devices before a large keyword join; names are leads.
+let ReviewedProducts = datatable(Keyword:string, Product:string, Status109618:string, Status109619:string, Source:string)
+[
+    // REVIEWED_PRODUCT_ROWS
+];
+ReviewedProducts
+| where isnotempty(Keyword)
+| extend MatchKey = 1
+| join kind=inner (DeviceTvmSoftwareInventory | extend MatchKey = 1) on MatchKey
+| where tolower(SoftwareName) contains tolower(Keyword)
+| project DeviceId, DeviceName, SoftwareVendor, SoftwareName, SoftwareVersion,
+    Keyword, Product, Status109618, Status109619, Source,
+    EvidenceKind = "product-name-lead-check-serving-runtime"

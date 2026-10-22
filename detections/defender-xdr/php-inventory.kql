@@ -1,0 +1,34 @@
+// Defender XDR: PHP-named inventory is a lead, not proof of a vulnerable runtime.
+// Fixed versions: PHP advisories GHSA-w8hw-w9fx-j79w / GHSA-6wmf-4rv5-p3rp.
+// Package revisions, epochs and prereleases require vendor/backport review.
+let FixedBranches = datatable(Branch:string, FixedVersion:string)
+[
+    "8.2", "8.2.35",
+    "8.3", "8.3.36",
+    "8.4", "8.4.27",
+    "8.5", "8.5.12"
+];
+DeviceTvmSoftwareInventory
+| where SoftwareName contains "php"
+| extend RuntimeRole = case(
+    SoftwareName matches regex @"(?i)(phpmyadmin|phpbb|phpunit|phpseclib|phpldapadmin)", "application-version-not-runtime",
+    SoftwareName matches regex @"(?i)(mod[-_]?php|libapache2-mod-php|libphp)", "apache-module-package",
+    SoftwareName contains "fpm", "fpm",
+    SoftwareName contains "cgi", "cgi",
+    SoftwareName matches regex @"(?i)(^|[-_])cli($|[-_])", "cli-not-web-facing-by-itself",
+    "unclassified-php-name")
+| extend RuntimeVersion = extract(@"^(?:[0-9]+:)?([0-9]+\.[0-9]+\.[0-9]+)(?:$|[-+~.])", 1, SoftwareVersion),
+    Branch = extract(@"^(?:[0-9]+:)?([0-9]+\.[0-9]+)\.", 1, SoftwareVersion)
+| extend VendorPackaged = isnotempty(RuntimeVersion) and SoftwareVersion != RuntimeVersion
+| join kind=leftouter FixedBranches on Branch
+| extend ReviewStatus = case(
+    RuntimeRole == "application-version-not-runtime", "check-serving-runtime-not-application-version",
+    isempty(RuntimeVersion) or isnull(parse_version(RuntimeVersion)), "unparsed-version-review-required",
+    VendorPackaged, "vendor-backport-or-prerelease-review-required",
+    parse_version(RuntimeVersion) < parse_version("8.2.0"), "unsupported-upstream-branch-check-vendor",
+    isempty(FixedVersion), "branch-outside-reference-review-required",
+    parse_version(RuntimeVersion) < parse_version(FixedVersion), "below-upstream-fixed-version",
+    "upstream-threshold-met-verify-deployment")
+| project DeviceId, DeviceName, OSPlatform, SoftwareVendor, SoftwareName,
+    SoftwareVersion, RuntimeRole, RuntimeVersion, FixedVersion, VendorPackaged,
+    ReviewStatus, EvidenceKind = "inventory-version-lead-not-finding"

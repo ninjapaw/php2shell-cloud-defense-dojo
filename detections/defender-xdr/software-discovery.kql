@@ -1,0 +1,13 @@
+// Defender XDR: review distinct PHP names AND all software on observed web hosts.
+// This discovers candidates outside a fixed product list; it does not prove PHP.
+let WebHosts = DeviceProcessEvents
+    | where Timestamp between (ago(30d) .. now())
+    | where FileName matches regex @"(?i)^(php.*|lsphp.*|apache.*|httpd.*|nginx.*|w3wp\.exe|litespeed|lshttpd|frankenphp)$"
+    | distinct DeviceId;
+DeviceTvmSoftwareInventory
+| where SoftwareName contains "php" or DeviceId in (WebHosts)
+| extend DiscoveryReason = iff(SoftwareName contains "php", "php-name", "software-on-observed-web-host")
+| summarize Devices = dcount(DeviceId), Versions = make_set(SoftwareVersion, 20),
+    SampleDevices = make_set(DeviceName, 10) by SoftwareVendor, SoftwareName, DiscoveryReason
+| project SoftwareVendor, SoftwareName, DiscoveryReason, Devices, Versions,
+    SampleDevices, EvidenceKind = "software-discovery-lead-review-required"

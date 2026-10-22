@@ -1,0 +1,7 @@
+// Defender XDR: requires TVM coverage and published detection for these CVEs.
+// Inventory snapshots have no event Timestamp. Empty results are not clearance.
+DeviceTvmSoftwareVulnerabilities
+| where CveId in~ ("CVE-2026-109618", "CVE-2026-109619")
+| project DeviceId, DeviceName, OSPlatform, SoftwareName, SoftwareVersion,
+    CveId, RecommendedSecurityUpdate,
+    EvidenceKind = "reported-vulnerability-review-required"
