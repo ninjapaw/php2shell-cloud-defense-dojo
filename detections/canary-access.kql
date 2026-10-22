@@ -1,0 +1,19 @@
+// Required when available: AppServiceConsoleLogs.
+// The canary is an in-code fabricated fixture, NOT a secret or Azure data read.
+// A missing RequestAt can be expected when WAF Prevention blocked the marker.
+let RunIdFilter = "";
+let Empty = datatable(TimeGenerated:datetime)[];
+union isfuzzy=true Empty, AppServiceConsoleLogs
+| where TimeGenerated between (ago(1h) .. now())
+| extend Event = parse_json(extract(@"DOJO_EVENT (\{.*\})", 1, tostring(column_ifexists("ResultDescription", ""))))
+| where tobool(Event.synthetic) == true and tostring(Event.signal) in ("request", "canary")
+| extend RunId = tostring(Event.runId), Signal = tostring(Event.signal)
+| where isnotempty(RunId) and (isempty(RunIdFilter) or RunId == RunIdFilter)
+| summarize RequestAt = minif(TimeGenerated, Signal == "request"),
+    CanaryAt = minif(TimeGenerated, Signal == "canary"),
+    CanaryIds = make_set(tostring(Event.canary.id)), Identities = make_set(tostring(Event.identity)),
+    ClientIps = make_set(tostring(Event.clientIp)), Hostnames = make_set(tostring(Event.hostname))
+    by RunId, ResourceId = tostring(Event.resourceId)
+| where isnotnull(CanaryAt)
+| extend TimeGenerated = CanaryAt, RequestBeforeCanary = RequestAt <= CanaryAt,
+    EvidenceKind = "synthetic-fixture-access-not-cloud-data-access"

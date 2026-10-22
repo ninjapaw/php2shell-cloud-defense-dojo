@@ -1,0 +1,7 @@
+{
+  "environment": "dev",
+  "location": "eastus2",
+  "ttlHours": 24,
+  "phpVersion": "8.4",
+  "customDomain": ""
+}
