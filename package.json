@@ -1,0 +1,25 @@
+{
+  "name": "php2shell-cloud-defense-dojo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Disposable, defensive-only PHP, Defender CSPM, Azure WAF, and Sentinel training lab.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "node scripts/check.mjs",
+    "evaluate": "node scripts/evaluate-hunts.mjs",
+    "prepare:products": "node scripts/prepare-products.mjs",
+    "plan": "node scripts/dojo.mjs plan",
+    "doctor": "node scripts/dojo.mjs doctor",
+    "vendor:check": "node scripts/check-vendor.mjs",
+    "infra:check": "node scripts/check-infra.mjs"
+  },
+  "devDependencies": {
+    "@kusto/language-service-next": "12.4.1",
+    "yaml": "2.9.1"
+  }
+}
