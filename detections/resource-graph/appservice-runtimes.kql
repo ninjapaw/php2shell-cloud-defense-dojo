@@ -1,0 +1,20 @@
+// Resource Graph: configuration reports a stack, NOT its effective patch level.
+// Unknown config and custom containers remain review candidates, including slots.
+// For empty config use the authorized app's read-only webapp config show fallback.
+resources
+| where type in~ ("microsoft.web/sites", "microsoft.web/sites/slots")
+| extend LinuxStack = tostring(properties.siteConfig.linuxFxVersion),
+    WindowsPhp = tostring(properties.siteConfig.phpVersion)
+| extend CandidateKind = case(
+    LinuxStack startswith "PHP|", "php-platform-stack",
+    LinuxStack startswith "WORDPRESS|", "wordpress-platform-stack",
+    LinuxStack startswith "DOCKER|" or LinuxStack startswith "COMPOSE|" or LinuxStack startswith "KUBE|", "custom-container-inspect-image",
+    WindowsPhp !in~ ("", "off", "0"), "windows-php-config",
+    isempty(LinuxStack), "runtime-not-reported-review-config",
+    "other-reported-runtime")
+| where CandidateKind != "other-reported-runtime"
+| project ResourceId = id, AppName = name, subscriptionId, resourceGroup, location,
+    Runtime = coalesce(LinuxStack, WindowsPhp), CandidateKind,
+    DefaultHostName = tostring(properties.defaultHostName),
+    ReviewStatus = "verify-effective-runtime-and-patch-level",
+    EvidenceKind = "runtime-configuration-lead-not-patch-proof"

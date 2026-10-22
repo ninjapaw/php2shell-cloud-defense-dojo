@@ -1,0 +1,21 @@
+// Optional: DeviceNetworkEvents, only when supported workload telemetry exists.
+// App Service in this scaffold does NOT emit DeviceNetworkEvents.
+// Required for synthetic examples: AppServiceConsoleLogs. No egress is simulated.
+let RunIdFilter = "";
+let Empty = datatable(TimeGenerated:datetime)[];
+union isfuzzy=true withsource=SourceTable Empty, DeviceNetworkEvents, AppServiceConsoleLogs
+| where TimeGenerated between (ago(1h) .. now())
+| extend Event = parse_json(extract(@"DOJO_EVENT (\{.*\})", 1, tostring(column_ifexists("ResultDescription", ""))))
+| extend Process = tostring(column_ifexists("InitiatingProcessFileName", "")), Synthetic = tobool(Event.synthetic)
+| where (SourceTable endswith "DeviceNetworkEvents" and Process in~ ("php", "php-fpm", "nginx", "httpd", "apache2"))
+    or (Synthetic == true and tostring(Event.signal) == "outbound-synthetic")
+| extend RunId = tostring(Event.runId)
+| where isempty(RunIdFilter) or RunId == RunIdFilter
+| project TimeGenerated, RunId, Synthetic, Process,
+    Hostname = coalesce(tostring(Event.hostname), tostring(column_ifexists("DeviceName", ""))),
+    DeviceId = tostring(column_ifexists("DeviceId", "")),
+    ResourceId = coalesce(tostring(Event.resourceId), tostring(column_ifexists("_ResourceId", ""))),
+    Identity = coalesce(tostring(Event.identity), tostring(column_ifexists("InitiatingProcessAccountName", ""))),
+    ClientIp = tostring(Event.clientIp), RemoteIp = tostring(column_ifexists("RemoteIP", "")),
+    RemotePort = toint(column_ifexists("RemotePort", int(null))),
+    EvidenceKind = iff(Synthetic == true, "synthetic-egress-shape-no-connection", "observed-network-review-required")

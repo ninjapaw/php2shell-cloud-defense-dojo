@@ -1,0 +1,13 @@
+// Resource Graph: review ALL runtime strings, not only a fixed PHP stack list.
+// An unreported runtime is a collection/configuration gap, not proof of no PHP.
+resources
+| where type in~ ("microsoft.web/sites", "microsoft.web/sites/slots")
+| extend LinuxStack = tostring(properties.siteConfig.linuxFxVersion),
+    WindowsPhp = tostring(properties.siteConfig.phpVersion)
+| extend Runtime = case(
+    isnotempty(LinuxStack), LinuxStack,
+    WindowsPhp !in~ ("", "off", "0"), strcat("Windows PHP ", WindowsPhp),
+    "(runtime not reported)")
+| summarize Apps = count(), SampleResourceIds = make_set(id, 10) by Runtime
+| project Runtime, Apps, SampleResourceIds,
+    EvidenceKind = "runtime-discovery-review-required"

@@ -1,0 +1,35 @@
+// Log Analytics: requires resource-specific AGWAccessLogs + AGWFirewallLogs.
+// This lab deploys Front Door, NOT Application Gateway. These are optional hunts.
+// Rules 200002/200003 are generic parsing leads; verify the active ruleset.
+// Correlate nonempty transaction IDs within the SAME gateway to avoid false joins.
+let Access = AGWAccessLogs
+    | where TimeGenerated between (ago(14d) .. now())
+    | project TimeGenerated, ResourceId = tolower(_ResourceId), TransactionId,
+        AccessHost = Host, ClientIp, HttpMethod, ServerStatus, ReceivedBytes;
+let Bursts = Access
+    | where HttpMethod == "POST"
+    | summarize Events = count(), BackendErrors = countif(ServerStatus between (500 .. 599)),
+        MaxRequestBytes = max(ReceivedBytes)
+        by TimeGenerated = bin(TimeGenerated, 5m), ResourceId, Hostname = AccessHost, ClientIp
+    | where BackendErrors >= 5 and MaxRequestBytes > 100000
+    | extend Signal = "gateway-large-post-backend-error-burst",
+        RuleId = "", WafAction = "", TransactionId = "";
+let BodySignals = AGWFirewallLogs
+    | where TimeGenerated between (ago(14d) .. now())
+    | where RuleId in ("200002", "200003")
+        or Message contains "multipart" or DetailedMessage contains "multipart"
+        or Message contains "request body" or DetailedMessage contains "request body"
+    | project TimeGenerated, ResourceId = tolower(_ResourceId), TransactionId,
+        Hostname, ClientIp, RuleId, WafAction = Action
+    | join kind=leftouter (
+        Access
+        | where isnotempty(TransactionId)
+        | summarize arg_max(TimeGenerated, AccessHost, ServerStatus, ReceivedBytes) by ResourceId, TransactionId
+    ) on ResourceId, TransactionId
+    | extend Hostname = coalesce(AccessHost, Hostname), Signal = "gateway-body-parsing-rule-lead",
+        Events = long(1), BackendErrors = iff(isnull(ServerStatus), long(null), tolong(iff(ServerStatus between (500 .. 599), 1, 0))),
+        MaxRequestBytes = ReceivedBytes;
+union Bursts, BodySignals
+| project TimeGenerated, ResourceId, Hostname, ClientIp, Signal, Events,
+    BackendErrors, MaxRequestBytes, RuleId, WafAction, TransactionId,
+    EvidenceKind = "observed-generic-waf-http-lead"

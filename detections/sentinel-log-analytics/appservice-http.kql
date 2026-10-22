@@ -1,0 +1,37 @@
+// Log Analytics: requires AppServiceHTTPLogs diagnostics, enabled by this lab.
+// No Content-Type, request body or response cookie is available in this table.
+// Request cookies are measured, never projected. Short bins are clusters, not
+// proof of an ordered exploit sequence; custom session names need separate review.
+let Requests = AppServiceHTTPLogs
+    | where TimeGenerated between (ago(14d) .. now())
+    | project TimeGenerated, ResourceId = tolower(_ResourceId), Hostname = tolower(CsHost),
+        ClientIp = CIp, Method = CsMethod, Status = ScStatus, RequestBytes = CsBytes,
+        RequestCookieLength = strlen(Cookie),
+        HasSession = Cookie matches regex @"(?i)(^|;\s*)PHPSESSID=", Uri = CsUriStem;
+let Bursts = Requests
+    | where Method == "POST"
+    | summarize Events = count(), Errors = countif(Status between (500 .. 599)),
+        MaxRequestBytes = max(RequestBytes), MaxRequestCookieLength = max(RequestCookieLength),
+        SessionPosts = countif(HasSession), Uris = make_set(Uri, 5)
+        by TimeGenerated = bin(TimeGenerated, 5m), ResourceId, Hostname, ClientIp
+    | where Errors >= 5 and MaxRequestBytes > 100000
+    | extend Signal = "large-post-server-error-burst";
+let SessionClusters = Requests
+    | where Method == "POST"
+    | summarize Events = count(), Errors = countif(Status between (500 .. 599)),
+        MaxRequestBytes = max(RequestBytes), MaxRequestCookieLength = max(RequestCookieLength),
+        SessionPosts = countif(HasSession), Uris = make_set(Uri, 5)
+        by TimeGenerated = bin(TimeGenerated, 10s), ResourceId, Hostname, ClientIp
+    | where Events >= 2 and SessionPosts >= 1 and Errors >= 1
+    | extend Signal = "short-post-session-error-cluster";
+let LargeCookies = Requests
+    | where RequestCookieLength > 1000
+    | summarize Events = count(), Errors = countif(Status between (500 .. 599)),
+        MaxRequestBytes = max(RequestBytes), MaxRequestCookieLength = max(RequestCookieLength),
+        SessionPosts = countif(Method == "POST" and HasSession), Uris = make_set(Uri, 5)
+        by TimeGenerated = bin(TimeGenerated, 5m), ResourceId, Hostname, ClientIp
+    | extend Signal = "large-request-cookie";
+union Bursts, SessionClusters, LargeCookies
+| project TimeGenerated, ResourceId, Hostname, ClientIp, Signal, Events, Errors,
+    MaxRequestBytes, MaxRequestCookieLength, SessionPosts, Uris,
+    EvidenceKind = "observed-http-heuristic-not-exploit-proof"

@@ -1,0 +1,30 @@
+// Defender XDR: process START observations do not establish current running state.
+// Apache plus a mod_php package is a prioritization proxy, not loaded-module proof.
+// Include installed-but-quiet devices, even when no process started in the window.
+let ModulePackages = DeviceTvmSoftwareInventory
+    | where SoftwareName matches regex @"(?i)(mod[-_]?php|libapache2-mod-php|libphp)"
+    | summarize ModPhpPackages = make_set(strcat(SoftwareName, " ", SoftwareVersion), 30) by DeviceId, DeviceName;
+let Starts = DeviceProcessEvents
+    | where Timestamp between (ago(30d) .. now())
+    | where FileName matches regex @"(?i)^(apache2?(\.exe)?|httpd(\.exe)?|php[-0-9.]*fpm[0-9.]*|php-cgi(\.exe)?|lsphp[0-9.]*|frankenphp)$"
+    | summarize ApacheStarts = countif(FileName matches regex @"(?i)^(apache2?(\.exe)?|httpd(\.exe)?)$"),
+        WorkerStarts = countif(FileName matches regex @"(?i)^(php[-0-9.]*fpm[0-9.]*|php-cgi(\.exe)?|lsphp[0-9.]*|frankenphp)$"),
+        WorkerBinaries = make_set(FileName, 30), LastProcessStart = max(Timestamp) by DeviceId, DeviceName;
+union (ModulePackages | project DeviceId, DeviceName), (Starts | project DeviceId, DeviceName)
+| summarize DeviceName = take_any(DeviceName) by DeviceId
+| join kind=leftouter ModulePackages on DeviceId
+| join kind=leftouter Starts on DeviceId
+| extend Priority = case(
+    array_length(ModPhpPackages) > 0 and ApacheStarts > 0, 1,
+    WorkerStarts > 0, 2,
+    array_length(ModPhpPackages) > 0, 3,
+    4)
+| extend Classification = case(
+    Priority == 1, "apache-plus-module-package-proxy",
+    Priority == 2, "php-worker-start-observed",
+    Priority == 3, "module-package-installed-no-recent-start",
+    "apache-start-no-module-package-evidence")
+| project DeviceId, DeviceName, Priority, Classification, ModPhpPackages,
+    WorkerBinaries, LastProcessStart,
+    EvidenceKind = "runtime-start-observation-not-live-state"
+| order by Priority asc, DeviceName asc

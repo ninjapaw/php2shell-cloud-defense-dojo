@@ -1,0 +1,17 @@
+// Required when available: AppServiceConsoleLogs or AppServiceAppLogs.
+// Synthetic php-error events are deliberately NOT real PHP exceptions.
+let RunIdFilter = "";
+let Empty = datatable(TimeGenerated:datetime)[];
+union isfuzzy=true Empty, AppServiceConsoleLogs, AppServiceAppLogs
+| where TimeGenerated between (ago(1h) .. now())
+| extend Message = tostring(column_ifexists("ResultDescription", column_ifexists("Message", "")))
+| extend Event = parse_json(extract(@"DOJO_EVENT (\{.*\})", 1, Message))
+| where tostring(Event.signal) == "php-error" or Message has_any ("PHP Fatal error", "PHP Warning", "PHP Parse error")
+| extend RunId = tostring(Event.runId), Synthetic = tobool(Event.synthetic)
+| where isempty(RunIdFilter) or RunId == RunIdFilter
+| project TimeGenerated, RunId, Synthetic,
+    ResourceId = coalesce(tostring(Event.resourceId), tostring(column_ifexists("_ResourceId", ""))),
+    Hostname = tostring(Event.hostname), ClientIp = tostring(Event.clientIp),
+    Identity = tostring(Event.identity), Message,
+    EvidenceKind = iff(Synthetic == true, "synthetic-php-error", "observed-php-error-review-required")
+| order by TimeGenerated asc

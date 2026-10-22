@@ -1,0 +1,38 @@
+// Log Analytics: requires custom DCR tables with TimeGenerated, RawData, Computer.
+// Access format: timestamp|ip|method|uri|status|bytes|content-type|transfer-encoding|cookie-flag
+// Only a 0/1/- response-cookie SIZE FLAG is collected, never cookie/session values.
+// "-" means unobserved, not small. Malformed records remain visible as parse errors.
+let Errors = WebErrorLog_CL
+    | where TimeGenerated between (ago(14d) .. now())
+    | where RawData matches regex @"(?i)(Allowed memory size|Out of memory|Maximum execution time|child( pid)? [0-9]+ exit(ed)? (on |with |)signal|child [0-9]+ exited with code [0-9]+ after)"
+    | summarize Events = count()
+        by TimeGenerated = bin(TimeGenerated, 10m), ResourceId = _ResourceId, Computer
+    | extend ClientIp = "", Signal = "web-error-memory-or-worker-failure",
+        MultipartErrors = long(0), ChunkedMultipart = long(0), LargeResponseCookieFlags = long(0),
+        UnknownResponseCookie = long(0), MaxRequestBytes = long(0), ParseErrors = long(0);
+let Access = WebAccessLog_CL
+    | where TimeGenerated between (ago(14d) .. now())
+    | parse RawData with LoggedAt "|" ClientIp "|" Method "|" Uri "|" Status:int "|" RequestBytes:long "|" ContentType "|" TransferEncoding "|" CookieFlag
+    | extend ParseOk = isnotnull(Status) and Status between (100 .. 599)
+        and isnotnull(RequestBytes) and RequestBytes >= 0 and CookieFlag in ("0", "1", "-");
+let AccessSignals = Access
+    | where ParseOk
+    | summarize Events = count(),
+        MultipartErrors = countif(Method == "POST" and ContentType contains "multipart/form-data" and Status between (500 .. 599)),
+        ChunkedMultipart = countif(Method == "POST" and ContentType contains "multipart/form-data" and TransferEncoding has "chunked"),
+        LargeResponseCookieFlags = countif(CookieFlag == "1"), UnknownResponseCookie = countif(CookieFlag == "-"),
+        MaxRequestBytes = max(RequestBytes)
+        by TimeGenerated = bin(TimeGenerated, 10m), ResourceId = _ResourceId, Computer, ClientIp
+    | where MultipartErrors >= 3 or ChunkedMultipart >= 1 or LargeResponseCookieFlags >= 1
+    | extend Signal = "web-access-multipart-or-response-cookie-flag", ParseErrors = long(0);
+let ParseFailures = Access
+    | where not(ParseOk)
+    | summarize Events = count()
+        by TimeGenerated = bin(TimeGenerated, 10m), ResourceId = _ResourceId, Computer
+    | extend ClientIp = "", Signal = "collection-parse-error-review-required",
+        MultipartErrors = long(0), ChunkedMultipart = long(0), LargeResponseCookieFlags = long(0),
+        UnknownResponseCookie = long(0), MaxRequestBytes = long(0), ParseErrors = Events;
+union Errors, AccessSignals, ParseFailures
+| project TimeGenerated, ResourceId, Computer, ClientIp, Signal, Events,
+    MultipartErrors, ChunkedMultipart, LargeResponseCookieFlags, UnknownResponseCookie,
+    MaxRequestBytes, ParseErrors, EvidenceKind = "observed-custom-web-log-review-required"

@@ -1,0 +1,17 @@
+// Defender XDR: discover unfamiliar launchers and inbound web listeners.
+// Inbound telemetry varies by OS. Neither branch is an exhaustive worker list.
+let Starts = DeviceProcessEvents
+    | where Timestamp between (ago(30d) .. now())
+    | where FileName contains "php" or ProcessCommandLine contains "php"
+    | summarize Events = count(), Devices = dcount(DeviceId), LastSeen = max(Timestamp),
+        SampleDevices = make_set(DeviceName, 10) by Process = FileName
+    | extend DiscoveryKind = "php-name-or-command";
+let Listeners = DeviceNetworkEvents
+    | where Timestamp between (ago(30d) .. now())
+    | where ActionType == "InboundConnectionAccepted" and LocalPort in (80, 443, 8000, 8080, 8443, 8888)
+    | summarize Events = count(), Devices = dcount(DeviceId), LastSeen = max(Timestamp),
+        SampleDevices = make_set(DeviceName, 10) by Process = InitiatingProcessFileName
+    | extend DiscoveryKind = "inbound-web-port";
+union Starts, Listeners
+| project DiscoveryKind, Process, Events, Devices, LastSeen, SampleDevices,
+    EvidenceKind = "worker-discovery-lead-review-required"

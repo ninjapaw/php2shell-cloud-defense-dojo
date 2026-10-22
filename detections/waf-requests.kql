@@ -1,0 +1,21 @@
+// Required when available: AzureDiagnostics (FrontDoorWebApplicationFirewallLog).
+// The empty source keeps a new workspace queryable when the table is missing.
+// Real WAF records of benign input are NOT a CVE detection or proof of compromise.
+let RunIdFilter = "";
+let Window = 1h;
+let Empty = datatable(TimeGenerated:datetime)[];
+union isfuzzy=true Empty, AzureDiagnostics
+| where TimeGenerated between (ago(Window) .. now())
+| where tostring(column_ifexists("Category", "")) == "FrontDoorWebApplicationFirewallLog"
+| extend RequestUri = tostring(column_ifexists("requestUri_s", ""))
+| extend RunId = extract(@"[?&]runId=([0-9a-f-]{36})", 1, RequestUri)
+| where isnotempty(RunId) and (isempty(RunIdFilter) or RunId == RunIdFilter)
+| project TimeGenerated, RunId,
+    ResourceId = tostring(column_ifexists("_ResourceId", "")),
+    ClientIp = tostring(column_ifexists("clientIP_s", "")),
+    Hostname = tostring(column_ifexists("host_s", "")),
+    Action = tostring(column_ifexists("action_s", "")),
+    RuleName = tostring(column_ifexists("ruleName_s", "")),
+    TrackingReference = tostring(column_ifexists("trackingReference_s", "")),
+    RequestUri, EvidenceKind = "real-waf-log-benign-input"
+| order by TimeGenerated asc

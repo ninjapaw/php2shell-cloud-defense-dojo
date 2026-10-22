@@ -1,0 +1,11 @@
+// Resource Graph: set an explicitly authorized subscription/resource-group scope.
+// Requires actual Defender assessments; text matches are not confirmed findings.
+securityresources
+| where type in~ ("microsoft.security/assessments", "microsoft.security/assessments/subassessments")
+| extend Details = tostring(properties)
+| where Details contains "PHP" or Details contains "CVE-2026-109618" or Details contains "CVE-2026-109619"
+| project AssessmentId = id, subscriptionId, resourceGroup,
+    ResourceId = coalesce(tostring(properties.resourceDetails.id), tostring(properties.resourceDetails.Id)),
+    DisplayName = tostring(properties.displayName), Status = tostring(properties.status.code),
+    AssessmentTime = todatetime(properties.timeGenerated),
+    EvidenceKind = "assessment-text-match-review-required"

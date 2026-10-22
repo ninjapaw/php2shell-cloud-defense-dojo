@@ -1,0 +1,17 @@
+// Defender XDR: requires MDE network telemetry; no connections are simulated here.
+// A worker's child tool is retained even on 80/443. Direct worker API/mail traffic
+// on common ports is excluded; review that blind spot and private destinations too.
+let WorkerPattern = @"(?i)^(php(?:[0-9.]*-?fpm[0-9.]*|-cgi|[0-9.]*)?(?:\.exe)?|lsphp[0-9.]*|apache2?(?:\.exe)?|httpd(?:\.exe)?|w3wp\.exe|nginx|litespeed|lshttpd|frankenphp)$";
+DeviceNetworkEvents
+| where Timestamp between (ago(30d) .. now())
+| where ActionType in ("ConnectionSuccess", "ConnectionAttempt", "ConnectionFailed")
+| where RemoteIPType =~ "Public"
+| extend WorkerDirect = InitiatingProcessFileName matches regex WorkerPattern and RemotePort !in (80, 443, 53, 25, 465, 587),
+    WorkerChild = InitiatingProcessParentFileName matches regex WorkerPattern
+        and InitiatingProcessFileName matches regex @"(?i)^(sh|bash|dash|ash|zsh|ksh|python[0-9.]*|perl|ruby|node|curl|wget|nc|ncat|netcat|socat|cmd|powershell|pwsh|certutil|bitsadmin)(\.exe)?$"
+| where WorkerDirect or WorkerChild
+| project Timestamp, DeviceId, DeviceName, ReportId,
+    Signal = iff(WorkerChild, "worker-child-tool-public-connection", "worker-unusual-public-port"),
+    Process = InitiatingProcessFileName, ParentWorker = InitiatingProcessParentFileName,
+    RemoteIP, RemotePort, RemoteUrl, ActionType,
+    EvidenceKind = "observed-network-lead-review-required"

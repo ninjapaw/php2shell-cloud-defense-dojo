@@ -1,0 +1,20 @@
+// Log Analytics: requires AMA + Syslog DCR on supported Linux web hosts.
+// App error files only reach Syslog if explicitly routed there. Fixed 10m bins
+// can split bursts. Crashes, OOM and churn are leads, not exploitation proof.
+Syslog
+| where TimeGenerated between (ago(14d) .. now())
+| where SyslogMessage matches regex @"(?i)(php|libphp|apache|httpd|lsphp)"
+    or ProcessName matches regex @"(?i)(php|apache|httpd|lsphp)"
+| extend Signal = case(
+    SyslogMessage contains "segfault", "worker-segfault",
+    SyslogMessage contains "out of memory" or SyslogMessage contains "oom-kill", "worker-oom",
+    SyslogMessage contains "Allowed memory size", "php-memory-limit",
+    SyslogMessage contains "Maximum execution time", "php-execution-time",
+    SyslogMessage matches regex @"(?i)child( pid)? [0-9]+ exit(ed)? (on |with |)signal", "worker-signal-exit",
+    SyslogMessage matches regex @"(?i)child [0-9]+ exited with code [0-9]+ after", "worker-churn",
+    "")
+| where isnotempty(Signal)
+| summarize Events = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated)
+    by TimeGenerated = bin(TimeGenerated, 10m), ResourceId = _ResourceId, Computer, Signal
+| project TimeGenerated, ResourceId, Computer, Signal, Events, FirstSeen, LastSeen,
+    IsBurst = Events >= 5, EvidenceKind = "observed-worker-failure-review-required"

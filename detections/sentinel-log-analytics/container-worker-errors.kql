@@ -1,0 +1,20 @@
+// Log Analytics: requires Container Insights ContainerLogV2, not deployed here.
+// PHP/FPM must actually send errors/worker output to stdout/stderr for collection.
+// LogMessage can be dynamic. Workload failures do not establish exploitation.
+ContainerLogV2
+| where TimeGenerated between (ago(14d) .. now())
+| extend Message = tostring(LogMessage)
+| extend Signal = case(
+    Message contains "Allowed memory size" or Message contains "Out of memory", "php-memory-error",
+    Message contains "Maximum execution time", "php-execution-time",
+    Message matches regex @"(?i)child( pid)? [0-9]+ exit(ed)? (on |with |)signal", "worker-signal-exit",
+    Message matches regex @"(?i)child [0-9]+ exited with code [0-9]+ after", "worker-churn",
+    Message matches regex @"(?i)PHP (Fatal error|Warning|Deprecated).*(session|upload_progress)", "php-session-diagnostic",
+    "")
+| where isnotempty(Signal)
+| summarize Events = count(), Containers = make_set(ContainerName, 10),
+    FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated)
+    by TimeGenerated = bin(TimeGenerated, 10m), ResourceId = _ResourceId, PodNamespace, PodName, Signal
+| project TimeGenerated, ResourceId, PodNamespace, PodName, Signal, Events,
+    Containers, FirstSeen, LastSeen,
+    EvidenceKind = "observed-container-worker-error-review-required"

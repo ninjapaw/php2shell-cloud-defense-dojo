@@ -1,0 +1,32 @@
+{
+  "lab-workspace": {
+    "AzureDiagnostics": "(TimeGenerated:datetime, Category:string, requestUri_s:string, _ResourceId:string, clientIP_s:string, host_s:string, action_s:string, ruleName_s:string, trackingReference_s:string)",
+    "AppServiceConsoleLogs": "(TimeGenerated:datetime, ResultDescription:string, _ResourceId:string)",
+    "AppServiceAppLogs": "(TimeGenerated:datetime, Message:string, _ResourceId:string)",
+    "DeviceProcessEvents": "(TimeGenerated:datetime, InitiatingProcessFileName:string, FileName:string, DeviceName:string, DeviceId:string, AccountName:string)",
+    "DeviceNetworkEvents": "(TimeGenerated:datetime, InitiatingProcessFileName:string, DeviceName:string, DeviceId:string, InitiatingProcessAccountName:string, RemoteIP:string, RemotePort:int)",
+    "SecurityRecommendation": "(TimeGenerated:datetime, AssessedResourceId:string, RecommendationDisplayName:string)"
+  },
+  "defender-xdr": {
+    "DeviceTvmSoftwareVulnerabilities": "(DeviceId:string, DeviceName:string, OSPlatform:string, SoftwareVendor:string, SoftwareName:string, SoftwareVersion:string, CveId:string, RecommendedSecurityUpdate:string)",
+    "DeviceTvmSoftwareInventory": "(DeviceId:string, DeviceName:string, OSPlatform:string, SoftwareVendor:string, SoftwareName:string, SoftwareVersion:string, EndOfSupportStatus:string)",
+    "DeviceTvmSoftwareEvidenceBeta": "(DeviceId:string, SoftwareVendor:string, SoftwareName:string, SoftwareVersion:string, DiskPaths:dynamic, RegistryPaths:dynamic, LastSeenTime:string)",
+    "DeviceInfo": "(Timestamp:datetime, DeviceId:string, DeviceName:string, OSPlatform:string)",
+    "DeviceProcessEvents": "(Timestamp:datetime, DeviceId:string, DeviceName:string, ReportId:long, FileName:string, FolderPath:string, ProcessCommandLine:string, AccountName:string, InitiatingProcessFileName:string, InitiatingProcessCommandLine:string, ProcessVersionInfoProductVersion:string)",
+    "DeviceFileEvents": "(Timestamp:datetime, DeviceId:string, DeviceName:string, ReportId:long, ActionType:string, FileName:string, FolderPath:string, SHA1:string, InitiatingProcessFileName:string, InitiatingProcessCommandLine:string)",
+    "DeviceNetworkEvents": "(Timestamp:datetime, DeviceId:string, DeviceName:string, ReportId:long, ActionType:string, LocalPort:int, RemoteIP:string, RemoteIPType:string, RemotePort:int, RemoteUrl:string, InitiatingProcessFileName:string, InitiatingProcessParentFileName:string, InitiatingProcessCommandLine:string)"
+  },
+  "resource-graph": {
+    "resources": "(id:string, name:string, type:string, ['kind']:string, location:string, subscriptionId:string, resourceGroup:string, properties:dynamic)",
+    "securityresources": "(id:string, name:string, type:string, subscriptionId:string, resourceGroup:string, properties:dynamic)"
+  },
+  "sentinel-log-analytics": {
+    "Syslog": "(TimeGenerated:datetime, _ResourceId:string, Computer:string, ProcessName:string, SyslogMessage:string, Facility:string, SeverityLevel:string)",
+    "AppServiceHTTPLogs": "(TimeGenerated:datetime, _ResourceId:string, CIp:string, CsHost:string, CsMethod:string, CsUriStem:string, CsBytes:int, ScStatus:int, Cookie:string, UserAgent:string)",
+    "AGWAccessLogs": "(TimeGenerated:datetime, _ResourceId:string, TransactionId:string, ClientIp:string, Host:string, HttpMethod:string, HttpStatus:int, ServerStatus:int, ReceivedBytes:int, RequestUri:string, WafMode:string)",
+    "AGWFirewallLogs": "(TimeGenerated:datetime, _ResourceId:string, TransactionId:string, ClientIp:string, Hostname:string, RuleId:string, Message:string, DetailedMessage:string, Action:string)",
+    "ContainerLogV2": "(TimeGenerated:datetime, _ResourceId:string, LogMessage:dynamic, ContainerName:string, PodNamespace:string, PodName:string)",
+    "WebErrorLog_CL": "(TimeGenerated:datetime, _ResourceId:string, Computer:string, RawData:string)",
+    "WebAccessLog_CL": "(TimeGenerated:datetime, _ResourceId:string, Computer:string, RawData:string)"
+  }
+}

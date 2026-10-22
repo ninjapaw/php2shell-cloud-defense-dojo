@@ -1,0 +1,25 @@
+// Optional: DeviceProcessEvents, only for a workload with supported MDE telemetry.
+// App Service in this scaffold does NOT emit DeviceProcessEvents.
+// Required for synthetic examples: AppServiceConsoleLogs.
+// Maintenance and legitimate workers can match; an event is not compromise.
+let RunIdFilter = "";
+let Empty = datatable(TimeGenerated:datetime)[];
+union isfuzzy=true withsource=SourceTable Empty, DeviceProcessEvents, AppServiceConsoleLogs
+| where TimeGenerated between (ago(1h) .. now())
+| extend Event = parse_json(extract(@"DOJO_EVENT (\{.*\})", 1, tostring(column_ifexists("ResultDescription", ""))))
+| extend ParentProcess = tostring(column_ifexists("InitiatingProcessFileName", "")),
+    ChildProcess = tostring(column_ifexists("FileName", "")), Synthetic = tobool(Event.synthetic)
+| where (SourceTable endswith "DeviceProcessEvents"
+    and ParentProcess in~ ("php", "php-fpm", "nginx", "httpd", "apache2")
+    and ChildProcess !in~ ("php", "php-fpm", "nginx", "httpd", "apache2"))
+    or (Synthetic == true and tostring(Event.signal) == "process-synthetic")
+| extend RunId = tostring(Event.runId)
+| where isempty(RunIdFilter) or RunId == RunIdFilter
+| project TimeGenerated, RunId, Synthetic, ParentProcess,
+    ChildProcess = iff(Synthetic == true, "(synthetic; no child process launched)", ChildProcess),
+    Hostname = coalesce(tostring(Event.hostname), tostring(column_ifexists("DeviceName", ""))),
+    DeviceId = tostring(column_ifexists("DeviceId", "")),
+    ResourceId = coalesce(tostring(Event.resourceId), tostring(column_ifexists("_ResourceId", ""))),
+    ClientIp = tostring(Event.clientIp),
+    Identity = coalesce(tostring(Event.identity), tostring(column_ifexists("AccountName", ""))),
+    EvidenceKind = iff(Synthetic == true, "synthetic-process-shape", "observed-process-review-required")
