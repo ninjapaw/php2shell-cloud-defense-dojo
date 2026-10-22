@@ -1,0 +1,91 @@
+name: Plan, doctor, deploy or protect
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Isolated training environment
+        type: choice
+        options: [dev]
+        default: dev
+        required: true
+      action:
+        description: Lifecycle action (protect explicitly switches WAF to Prevention)
+        type: choice
+        options: [plan, doctor, deploy, repair, protect, domain, domain-check]
+        default: plan
+        required: true
+      enable_cspm:
+        description: Approve billable SUBSCRIPTION-WIDE Defender CSPM Standard
+        type: boolean
+        default: false
+      enable_sentinel:
+        description: Approve billable Sentinel on this lab workspace
+        type: boolean
+        default: false
+      enable_analytics:
+        description: Enable the Informational SYNTHETIC training correlation rule
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php2shell-dev-${{ vars.LAB_SUFFIX }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DOJO_ENV: ${{ inputs.environment }}
+      DOJO_ACTION: ${{ inputs.action }}
+      DOJO_SUFFIX: ${{ vars.LAB_SUFFIX }}
+      DOJO_CUSTOM_DOMAIN: ${{ vars.LAB_CUSTOM_DOMAIN }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CORE_COLLECT_TELEMETRY: "false"
+      AZURE_EXTENSION_USE_DYNAMIC_INSTALL: "no"
+      AZURE_LOGIN_POST_CLEANUP: "true"
+      ENABLE_CSPM: ${{ inputs.enable_cspm }}
+      ENABLE_SENTINEL: ${{ inputs.enable_sentinel }}
+      ENABLE_ANALYTICS: ${{ inputs.enable_analytics }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Use ephemeral Azure CLI configuration
+        run: |
+          set -euo pipefail
+          printf 'AZURE_CONFIG_DIR=%s/php2shell-azure\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Offline plan and input validation
+        run: node scripts/dojo.mjs plan --environment "$DOJO_ENV"
+      - uses: azure/login@935127ca5bb3c4b02c9c2c10060028383878f33f # v3
+        if: inputs.action != 'plan'
+        with:
+          client-id: ${{ vars[inputs.action == 'domain-check' && 'AZURE_READ_CLIENT_ID' || 'AZURE_DEPLOY_CLIENT_ID'] }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Install Bicep
+        if: inputs.action != 'plan'
+        run: az bicep install --version v0.48.1
+      - name: Guarded lifecycle (includes doctor and what-if before writes)
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ZONE_NAME: ${{ vars.CLOUDFLARE_ZONE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ inputs.action == 'domain' && secrets.CLOUDFLARE_API_TOKEN || '' }}
+        run: |
+          set -euo pipefail
+          args=("$DOJO_ACTION" --environment "$DOJO_ENV" --yes)
+          if [[ "$ENABLE_CSPM" == true ]]; then args+=(--enable-defender-cspm); fi
+          if [[ "$ENABLE_SENTINEL" == true ]]; then args+=(--enable-sentinel); fi
+          if [[ "$ENABLE_ANALYTICS" == true ]]; then args+=(--enable-analytics); fi
+          bash scripts/dojo.sh "${args[@]}"

@@ -1,0 +1,9 @@
+node_modules/
+output/
+*.zip
+*.log
+.env
+.env.*
+config/*.local.json
+infra/*.json
+!infra/analytics.json

@@ -1,0 +1,8 @@
+LICENSE PLACEHOLDER - MAINTAINER DECISION REQUIRED
+
+No license is granted for the original scaffold until the repository owner
+selects and commits an appropriate license. The package is marked UNLICENSED.
+
+Vendored Pawprint files are separately licensed under the MIT license in
+vendor/pawprint/LICENSE. Preserve that license and its attribution with those
+files. Third-party trademarks and product names remain their owners' property.

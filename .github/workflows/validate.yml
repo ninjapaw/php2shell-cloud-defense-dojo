@@ -1,0 +1,60 @@
+name: Validate defensive scaffold
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Isolated training environment
+        type: choice
+        options: [dev]
+        default: dev
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php2shell-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 15
+    env:
+      DOJO_ENV: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install locked test dependency
+        run: npm ci
+      - name: Validate workflow semantics
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Lint and security guardrail tests
+        run: |
+          set -euo pipefail
+          node scripts/dojo.mjs plan --environment "$DOJO_ENV" --suffix ci1234
+          npm run lint
+          npm test
+          npm run evaluate
+          npm run vendor:check
+          npm audit --audit-level=high
+      - name: Build and lint every Bicep entry point
+        run: |
+          set -euo pipefail
+          az bicep install --version v0.48.1
+          while IFS= read -r -d '' file; do
+            az bicep build --file "$file" --outfile "$RUNNER_TEMP/compiled.json" 2>"$RUNNER_TEMP/bicep.log"
+            cat "$RUNNER_TEMP/bicep.log"
+            if grep -Eq ': (Warning|Error) ' "$RUNNER_TEMP/bicep.log"; then
+              exit 1
+            fi
+          done < <(find infra vendor/pawprint/modules -name '*.bicep' -print0)
+          az bicep build --file infra/main.bicep --outfile "$RUNNER_TEMP/lab.json"
+          npm run infra:check -- "$RUNNER_TEMP/lab.json"

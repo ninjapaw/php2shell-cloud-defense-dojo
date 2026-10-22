@@ -1,0 +1,56 @@
+name: Remediate and validate closure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Remove synthetic training surfaces and enforce WAF Prevention
+        type: choice
+        options: [dev]
+        default: dev
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php2shell-dev-${{ vars.LAB_SUFFIX }}
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DOJO_ENV: ${{ inputs.environment }}
+      DOJO_SUFFIX: ${{ vars.LAB_SUFFIX }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CORE_COLLECT_TELEMETRY: "false"
+      AZURE_EXTENSION_USE_DYNAMIC_INSTALL: "no"
+      AZURE_LOGIN_POST_CLEANUP: "true"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Use ephemeral Azure CLI configuration
+        run: |
+          set -euo pipefail
+          printf 'AZURE_CONFIG_DIR=%s/php2shell-azure\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Validate dev input offline
+        run: node scripts/dojo.mjs plan --environment "$DOJO_ENV"
+      - uses: azure/login@935127ca5bb3c4b02c9c2c10060028383878f33f # v3
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Install Bicep
+        run: az bicep install --version v0.48.1
+      - name: What-if, fixed-state deployment and live closure checks
+        run: bash scripts/dojo.sh remediate --environment "$DOJO_ENV" --yes
