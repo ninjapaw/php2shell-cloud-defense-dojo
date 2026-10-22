@@ -135,6 +135,51 @@ Before dispatching a workflow:
    `CLOUDFLARE_API_TOKEN` as a secret. The workflow supplies that token only to
    `domain`, not simulation, ordinary deployment, or `domain-check`.
 
+### Read-only GitHub readiness preflight
+
+Before workflow dispatch, inspect the live protection configuration:
+
+```bash
+npm run github:check -- --repository ninjapaw/php2shell-cloud-defense-dojo --environment dev
+```
+
+The [checker](../scripts/check-github.mjs) uses bounded GET requests to GitHub,
+not Azure. It supports native Windows. Public repository metadata can be read
+without a token; private metadata needs an authorized read token supplied only
+through `GITHUB_TOKEN`, never an argument. The checker receives the existing
+Actions repository token in a step-scoped environment variable. Tokens, reviewer identities, secret values
+and raw error responses are not printed or persisted.
+
+Exit 0 means the checked GitHub configuration is readable and has an unambiguous
+required-reviewers rule, self-review prevention, and restricted deployment
+branches. Use protected branches or explicit custom branch/tag patterns such as
+`dev`; empty policies and literal `*`/`**` selectors do not pass. GitHub, not this
+script, matches the actual selected ref. Custom-policy inspection is bounded to
+100 entries and fails if the returned list is incomplete.
+
+Exit 1 means unavailable metadata, missing/incomplete protections, or an API/input
+error. It never substitutes a weak default, creates settings, chooses reviewers,
+disables approvals, or grants roles. Assigning approvers and reviewing admin
+bypass, repository branch protection and workflow-change protection remain owner
+decisions. A configured reviewer list is not proof an independent reviewer is
+available to approve a particular run.
+
+The JSON includes an **OIDC subject candidate** built from actual GitHub
+repository/owner IDs using the existing Pawprint helper. This does not verify
+the organization's subject customization, Entra federation or Azure permissions;
+confirm them separately as described above. No live KQL or workload evidence is
+collected by this preflight.
+
+All five workflows invoke this check after checkout/Node setup and before Azure
+login or other validation work. Their explicit Ubuntu 24.04 runners avoid image
+label drift. The offline validation workflow installs PHP 8.4 and 8.5 explicitly
+and tests both; neither CI runtime is inferred from the hosted image's default.
+Do not dispatch a workflow merely to auto-create an unprotected `dev` environment.
+Local plan/tests and locally authenticated lifecycle commands remain independent
+of this GitHub metadata service. If GitHub is unavailable, the documented local
+uninstall still requires exact subscription, ownership and typed group
+confirmation; never disable workflow protections to bypass the readiness check.
+
 All workflows are manual and the job environment is hardcoded to `dev`; the CLI
 still rejects unknown input values. OIDC login uses a runner-temp Azure config
 directory and the pinned login action's post-cleanup. Checkout does not persist

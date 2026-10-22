@@ -268,15 +268,22 @@ All five workflows are **manual-only** and use the protected `dev` GitHub
 Environment. Configure required reviewers, prevent self-approval, restrict
 deployment branches, and protect workflow changes **before** running them.
 
-- `validate.yml`: syntax, ShellCheck, tests, audit, Bicep build/lint and compiled
-  infrastructure safety assertions; no Azure authentication.
+Run `npm run github:check` first for read-only repository/environment readiness.
+Missing or unreadable protection settings fail explicitly. All five workflows
+run this check before Azure authentication or validation work; it never creates
+an environment, grants permissions, reads secret values, or changes Azure.
+
+- `validate.yml`: explicit **PHP 8.4 / 8.5** matrix, syntax, ShellCheck, tests,
+  audit, Bicep build/lint and compiled infrastructure safety assertions; no
+  Azure authentication.
 - `deploy.yml`: offline plan or read-only doctor; deploy/repair/protect include
   what-if and live post-deployment validation.
 - `simulate.yml`: approved bounded benign requests using a read identity.
 - `remediate.yml`: fixed-state deployment and closure validation.
 - `teardown.yml`: exact typed scenario-group confirmation.
 
-Actions are pinned to commit SHAs. Mutating workflows and simulation share one
+Actions are pinned to commit SHAs, and runners use **Ubuntu 24.04** rather than
+the moving `ubuntu-latest` label. Mutating workflows and simulation share one
 non-cancelling concurrency group. OIDC is used instead of client secrets; no Azure
 credential caches, tokens, or deployment outputs are uploaded. See
 [the setup guide](docs/operations.md#github-oidc-and-environment-approvals).
@@ -311,7 +318,10 @@ check explicit errors for each missing required table and exact output columns.
 to all 16 upstream query files, with live/manual evidence explicitly **not run**.
 These are offline syntax/type/coverage checks, not executed query thresholds or
 assertions of live telemetry or detection efficacy.
-The manual validation workflow also runs pinned actionlint and Bicep 0.48.1.
+The manual validation workflow explicitly installs both supported PHP branches
+with a pinned setup action; it does not depend on the runner's default PHP.
+It also runs pinned actionlint and Bicep 0.48.1. Hosted workflow execution still
+requires the protected `dev` environment to be configured and approved.
 Git enforces LF for all text sources, including JSON, CSS, INI and Markdown,
 so a native Windows checkout uses the same line-ending contract as Linux CI.
 
