@@ -119,6 +119,15 @@ Set a subscription budget and review the
 and your agreement before deploying. An expiry tag is a reminder, not automatic
 teardown. Default lifetime is 24 hours, configurable from 1-72 hours.
 
+## Optional isolated affected-runtime container
+
+The original App Service lab remains non-exploitable and synthetic. A separate,
+explicitly opted-in [container comparison](docs/container-lab.md) packages
+digest-pinned PHP 8.4.26 and fixed 8.4.27 on a private AKS cluster with Defender
+monitoring. It has no public ingress or exploit endpoint. This adds billable
+compute, registry, networking, and telemetry; it is not enabled by the normal
+lab deployment. Start with `npm run container:lab -- plan --suffix your1234`.
+
 ## Prerequisites
 
 - Node.js 24.19+ within Node 24, npm, and Git.

@@ -14,6 +14,7 @@
     "evaluate": "node scripts/evaluate-hunts.mjs",
     "prepare:products": "node scripts/prepare-products.mjs",
     "plan": "node scripts/dojo.mjs plan",
+    "container:lab": "node scripts/container-lab.mjs",
     "doctor": "node scripts/dojo.mjs doctor",
     "github:check": "node scripts/check-github.mjs",
     "vendor:check": "node scripts/check-vendor.mjs",

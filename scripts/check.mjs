@@ -5,7 +5,7 @@ import { ROOT } from "./dojo.mjs";
 import { runTool } from "./lib/azure.mjs";
 
 const fix = process.argv.includes("--fix-line-endings");
-const roots = ["app", "scripts", "tests", "detections", "infra", "config", ".github"];
+const roots = ["app", "container-lab", "scripts", "tests", "detections", "infra", "config", ".github"];
 const files = [];
 function walk(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
