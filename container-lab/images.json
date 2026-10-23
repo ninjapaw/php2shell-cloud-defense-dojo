@@ -1,0 +1,16 @@
+{
+  "platform": "linux/amd64",
+  "reviewedAt": "2026-10-23",
+  "advisories": [
+    "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w",
+    "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"
+  ],
+  "vulnerable": {
+    "version": "8.4.26",
+    "source": "docker.io/library/php@sha256:745ef8b8e5291613b7f3e78d470c1497941e2ab548c869a7b0b506889ce6a1b3"
+  },
+  "fixed": {
+    "version": "8.4.27",
+    "source": "docker.io/library/php@sha256:55c0c31c13ca31a4fa00b882e60211730a858179af63198b7445a1105d1c53c9"
+  }
+}

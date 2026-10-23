@@ -1,15 +1,18 @@
 // Resource Graph: PHP-related finding text is a lead, not a full image inventory.
 // Images with zero findings require an authorized digest-based SBOM review.
+// Newer image findings can be primary assessments, not just subassessments.
 securityresources
-| where type =~ "microsoft.security/assessments/subassessments"
+| where type in~ ("microsoft.security/assessments", "microsoft.security/assessments/subassessments")
 | extend Additional = properties.additionalData, Details = tostring(properties)
 | where Details matches regex @"(?i)(\bphp[0-9.]*\b|libphp|mod_php|libapache2-mod-php)"
 | extend RegistryId = coalesce(
     extract(@"(?i)^(.*/providers/Microsoft\.ContainerRegistry/registries/[^/]+)", 1, id),
-    extract(@"(?i)^(.*/providers/Microsoft\.ContainerRegistry/registries/[^/]+)", 1, tostring(properties.resourceDetails.id)))
+    extract(@"(?i)^(.*/providers/Microsoft\.ContainerRegistry/registries/[^/]+)", 1, tostring(properties.resourceDetails.id)),
+    extract(@"(?i)^(.*/providers/Microsoft\.ContainerRegistry/registries/[^/]+)", 1, tostring(properties.resourceDetails.Id)))
 | where isnotempty(RegistryId)
 | extend Repository = coalesce(tostring(Additional.artifactDetails.repositoryName), tostring(Additional.repositoryName)),
-    ImageDigest = coalesce(tostring(Additional.artifactDetails.digest), tostring(Additional.imageDigest))
+    ImageDigest = coalesce(tostring(Additional.artifactDetails.digest), tostring(Additional.imageDigest),
+        extract(@"(?i)/securityentitydata/[^/]+-images-(sha256:[a-f0-9]{64})(?:/|$)", 1, id))
 | summarize FindingRows = count(), SampleAssessmentIds = make_set(id, 10)
     by RegistryId, Repository, ImageDigest, subscriptionId, resourceGroup
 | project RegistryId, Repository, ImageDigest, subscriptionId, resourceGroup,

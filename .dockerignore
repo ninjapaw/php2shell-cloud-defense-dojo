@@ -1,0 +1,14 @@
+**
+!container-lab/
+container-lab/**
+!container-lab/Dockerfile
+!container-lab/apache.conf
+!container-lab/php.ini
+!container-lab/index.php
+!container-lab/health.php
+!app/
+app/**
+!app/lab.php
+!app/assets/
+app/assets/**
+!app/assets/style.css
