@@ -1,24 +1,98 @@
-# Operations, permissions, and cost controls
+# PHP to Proof: operations, permissions, and cost controls
 
 ## Deployment contract
 
 Only `--environment dev` is accepted. The suffix is 4-12 lowercase letters/digits.
-There is no production override, arbitrary target, resource-group override, or
-secret flag. Azure operations require the active subscription to exactly match
+There is no production override, arbitrary target, CLI resource-group override,
+or secret flag. Azure operations require the active subscription to exactly match
 the explicit UUID and require the public `AzureCloud` cloud.
 
-The CLI creates only `rg-p2s-SUFFIX-dev` and resources beneath it, apart from the
-explicit optional subscription `CloudPosture` Standard pricing resource.
+The required `resourceGroup` in [dev configuration](../config/dev.json) is the
+authoritative main-lab group name: `NP-PHPToProof-Dev-CentralUS`. It follows
+`NP-<Workload>-<Environment>-<Region>`, as in the other project configurations.
+The CLI passes that exact name into Bicep and scopes resources, what-if,
+validation, and teardown to it, apart from the explicit optional subscription
+`CloudPosture` Standard pricing resource.
 An existing group must already carry the exact scenario ownership tags; it is
 never silently adopted. Do not precreate an untagged group with the same name.
+Boolean ownership tags are emitted as literal lowercase `true`/`false` strings;
+ARM's boolean-to-string casing must not make repair or teardown reject the group.
+
+Changing `resourceGroup` does not migrate or rename Azure resources. Keep its
+original value, location, subscription and suffix for repair or uninstall.
+For a legacy deployment, explicitly set its original `rg-p2s-SUFFIX-dev` name
+in JSON; there is no silent legacy fallback. To start a different isolated run,
+select a separate group name and suffix together. A suffix alone no longer
+selects another group. Update the region label when changing location.
+The subscription deployment record is named `php2shell-SUFFIX-dev`. Azure pins
+that name to its original metadata location, independently of the workload.
+For a new regional run, use a fresh suffix as well as the matching group name;
+reusing an old name at another location causes `InvalidDeploymentLocation`.
+The separate private container comparison is not configured by this setting
+and retains its existing `rg-p2sc-SUFFIX-dev` naming.
 
 `plan` is offline. `doctor` only reads tools, Azure configuration, permissions,
 provider registration, B1 region/runtime availability and subscription Bicep
 what-if. It never registers providers, changes the active account, installs a
 plan, or deploys. Workload capacity/quotas, policy, role propagation, DNS and WAF
 propagation can still fail later and are never silently ignored.
+A zero B1 VM quota requires a quota increase or an explicitly reviewed region
+change with a matching group name; do not silently upgrade the SKU or widen roles.
+
+### Optional Azure-hosted deployment runner
+
+When Linux/WSL2 CLI access is unavailable, the reviewed
+[runner stack](../infra/deploy-runner.bicep) can run the same guarded CLI in a
+digest-pinned, outbound-only Azure container. It is an explicit billable
+operator operation, not an application runtime or a bypass of doctor/what-if.
+
+`npm run cloud:bundle -- <new-output-file>` creates a checksum-pinned, allowlisted
+source bundle. `cloudContext()` supplies protected input chunks for the job's
+secure-object `sourceBundle` parameter. Each chunk is at most 8,000 characters;
+the encoded bundle must fit a 60 KiB budget and is never silently truncated.
+ACI uses secure environment values and verifies the checksum before extraction.
+No source storage endpoint, SAS, password, or copied CLI token is needed.
+Clients with request-size limits can stage source data (never credentials)
+through [protected module outputs](../infra/deploy-runner-source.bicep) and
+consume them with ARM `listOutputsWithSecureValues`. Keep every staging record
+in the invocation's helper group; ordinary plaintext outputs are not permitted.
+An immutable baseline may carry separately checksummed, protected overlays for
+`scripts/lib/azure.mjs`, `infra/main.bicep`, and `config/dev.json` only. At most one
+overlay per allowed path is accepted. The combined protected inputs remain within
+the 60 KiB budget.
+Run `npm run cloud:verify -- <compiled-job.json>` before deployment; it rejects
+stale embedded startup text, public ingress, unbounded compute, and unprotected
+source inputs. CI performs this check against a freshly compiled job.
+
+Prepare the stack with `startRunner=false` and an empty protected
+`sourceBundle` object containing `chunks: []`, then run the reviewed job module.
+`deploy` always runs doctor/what-if before writing workload resources.
+If doctor identifies unregistered Front Door support, explicitly approve
+`registerCdn=true` for the temporary operator and `registrationProvider=Microsoft.Cdn`
+for the job. Omission never registers providers or changes security pricing.
+The temporary identity has Contributor only at the
+configured main group, narrowly enumerated subscription deployment/metadata
+actions. There are no source-account data-role grants. The app identity still
+has no role grants. Redacted, output-only deployment records preserve actual
+success/failure results; a missing report is not success.
+CLI failures identify the command family without printing its parameter values
+or retaining an unredacted exception cause.
+The CLI adapter maps `webapp show`'s `appServicePlanId` to the ARM
+`serverFarmId` name used by lifecycle checks; invalid or conflicting IDs fail.
+
+Use a dedicated temporary group. The main group must be an existing, correctly
+tagged resource, never a stack-managed group. Before cleanup, verify the stack's
+managed-resource inventory against its invocation and exact helper/role IDs.
+Remove helper resources and assignments first, retaining the custom role and
+empty helper group; then remove those two remaining resources. Never perform
+unscoped deletion, use Complete deployment mode, or delete the main group.
 
 ### Optional external DNS boundary
+
+The configured public story hostname is `php2proof.ninjapaws.org` in the
+Cloudflare zone `ninjapaws.org`. See the [Cloudflare record reference](../README.md#optional-cloudflare-custom-domain)
+for the CNAME/TXT records and the distinction between the safe public dashboard
+and the private affected-runtime comparison.
 
 `domain --yes` is the only command that activates custom-domain intent.
 Use an explicitly authorized Cloudflare subdomain and keep DNS-only routing
@@ -185,7 +259,8 @@ still rejects unknown input values. OIDC login uses a runner-temp Azure config
 directory and the pinned login action's post-cleanup. Checkout does not persist
 GitHub credentials. There is no credential cache or artifact upload.
 Simulation, deployment, remediation and teardown share one non-cancelling
-concurrency group keyed by suffix, so a run cannot be torn down beneath another.
+dev-wide concurrency group, even if the suffix changes, because the group is
+now explicitly configured rather than suffix-derived.
 
 Workflows do not bootstrap Entra, register providers, or grant permissions.
 A missing variable/trust/role fails explicitly. Never bypass approval by
@@ -254,7 +329,8 @@ tag, but must not sweep/delete other groups or security pricing plans.
 ## Teardown and residual items
 
 1. Save only redacted, observed evidence if needed.
-2. Run uninstall with the exact confirmed group and original subscription/suffix.
+2. Keep the original JSON `resourceGroup`, location, subscription and suffix,
+   then run uninstall with that exact confirmed group name.
 3. The command waits for deletion and checks that the group no longer exists.
    Azure deletion failures/locks are errors, not success.
 4. Confirm the workload, edge profile/policy, workspace, Insights and Sentinel

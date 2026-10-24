@@ -1,7 +1,8 @@
 {
   "environment": "dev",
-  "location": "eastus2",
+  "resourceGroup": "NP-PHPToProof-Dev-CentralUS",
+  "location": "centralus",
   "ttlHours": 24,
   "phpVersion": "8.4",
-  "customDomain": ""
+  "customDomain": "php2proof.ninjapaws.org"
 }

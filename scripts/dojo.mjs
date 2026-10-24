@@ -10,7 +10,6 @@ import {
   assertResource, assertWhatIf, desiredState, hasPermission, redact, request, sameId,
 } from "./lib/safety.mjs";
 import { checkTools, createAzureClient, packageApp, readAzureCollection } from "./lib/azure.mjs";
-import { huntingGuide } from "./lib/hunting.mjs";
 import {
   assertDomainInZone, createCloudflareClient, reconcileAzureDns, validateDomain, verifyAzureDns,
 } from "../vendor/pawprint/scripts/cloudflare-dns.mjs";
@@ -22,7 +21,7 @@ const WRITE_COMMANDS = ["deploy", "repair", "protect", "remediate", "simulate", 
 
 function parameters(config, desired) {
   return Object.entries({
-    environmentName: "dev", suffix: config.suffix, location: config.location,
+    environmentName: "dev", groupName: config.resourceGroup, suffix: config.suffix, location: config.location,
     startedAt: desired.startedAt, expiresAt: desired.expiresAt, ttlHours: desired.ttlHours,
     labState: desired.labState, wafMode: desired.wafMode, phpVersion: config.phpVersion,
     enableDefenderCspm: config.enableDefenderCspm,
@@ -463,6 +462,7 @@ export async function execute(config, dependencies = {}) {
     return result;
   }
   if (config.command === "investigate") {
+    const { huntingGuide } = await import("./lib/hunting.mjs");
     const context = liveContext(group);
     const query = `securityresources
 | where type in~ ('microsoft.security/assessments', 'microsoft.security/assessments/subassessments')
@@ -496,6 +496,7 @@ export async function main(args = process.argv.slice(2)) {
   if (invocation.help) {
     console.log(`Usage: bash scripts/dojo.sh <${COMMANDS.join("|")}> --environment dev --suffix <4-12 lowercase letters/digits>
 Azure commands: --subscription <UUID> (or AZURE_SUBSCRIPTION_ID)
+Resource group: required resourceGroup in config/dev.json; no CLI group override
 Writes/simulation: --yes
 Teardown: --confirm-resource-group <exact-name> (cannot be bypassed)
 Explicit billable choices: --enable-defender-cspm, --enable-sentinel, --enable-analytics

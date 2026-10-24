@@ -14,7 +14,7 @@ $variant = getenv('LAB_VARIANT') ?: 'unconfigured';
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PHP2Shell | Isolated runtime assessment</title>
+  <title>PHP to Proof | Isolated runtime assessment</title>
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
@@ -22,7 +22,7 @@ $variant = getenv('LAB_VARIANT') ?: 'unconfigured';
   <main>
     <aside class="warning"><strong>INTENTIONALLY AFFECTED RUNTIME.</strong> Authorized isolated training only. No exploit, remote shell, real secrets, or compromise claim.</aside>
     <section class="hero">
-      <p class="eyebrow">CONTAINER RUNTIME / REAL VERSION EVIDENCE</p>
+      <p class="eyebrow">PHP TO PROOF / PRIVATE RUNTIME COMPARISON</p>
       <h1>Inspect the runtime.<br><span>Verify the patch.</span></h1>
       <p class="intro">Compare PHP 8.4.26 with the upstream 8.4.27 security fixes. Defender image findings and runtime test alerts must be observed separately, never inferred from this page.</p>
     </section>

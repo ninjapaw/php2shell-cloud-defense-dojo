@@ -10,7 +10,7 @@ on:
         default: dev
         required: true
       resource_group_confirmation:
-        description: Type the exact rg-p2s-SUFFIX-dev resource-group name
+        description: Type the exact resourceGroup name from config/dev.json
         type: string
         required: true
 
@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: php2shell-dev-${{ vars.LAB_SUFFIX }}
+  group: php2shell-dev
   cancel-in-progress: false
 
 jobs:

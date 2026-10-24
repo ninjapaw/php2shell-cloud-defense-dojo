@@ -7,7 +7,10 @@ import { names, SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../../scripts/lib/c
 export const SUBSCRIPTION = "11111111-1111-4111-8111-111111111111";
 export const PRINCIPAL = "22222222-2222-4222-8222-222222222222";
 export const FDID = "33333333-3333-4333-8333-333333333333";
-export const DEFAULT_CONFIG = { environment: "dev", location: "eastus2", ttlHours: 24, phpVersion: "8.4" };
+export const DEFAULT_CONFIG = {
+  environment: "dev", resourceGroup: "NP-PHPToProof-Dev-CentralUS",
+  location: "centralus", ttlHours: 24, phpVersion: "8.4",
+};
 
 export function configuration(command, overrides = {}) {
   return {
@@ -70,7 +73,7 @@ export function harness(config, options = {}) {
     group: options.absent ? undefined : ownedGroup(config, options.tags),
     deleted: false, packaged: 0, cleaned: 0, tools: 0, slept: [],
   };
-  const appHost = `${n.app}-fingerprint.eastus2-01.azurewebsites.net`;
+  const appHost = `${n.app}-fingerprint.${config.location}-01.azurewebsites.net`;
   const edgeHost = `${n.endpoint}-fingerprint.z01.azurefd.net`;
   function resource(id, properties, extra = {}) {
     return { id, properties, ...extra };
@@ -88,7 +91,7 @@ export function harness(config, options = {}) {
     if (command === "group show --name") return structuredClone(state.group);
     if (command === "group delete --name") { state.deleted = true; return null; }
     if (command === "provider show --namespace") return { registrationState: "Registered" };
-    if (command === "appservice list-locations --sku") return [{ name: "East US 2" }];
+    if (command === "appservice list-locations --sku") return [{ name: config.location }];
     if (command === "webapp list-runtimes --os") return ["PHP:8.4", "PHP:8.5"];
     if (command === "rest --method get") {
       if (new URL(args[4]).pathname.toLowerCase() === `${n.workspaceId}/providers/Microsoft.SecurityInsights/alertRules`.toLowerCase()) {

@@ -47,6 +47,30 @@ test("first deploy runs what-if before create, packages only the app, cleans up,
   assert.equal(h.requests.length, 4);
 });
 
+test("configured and legacy group names scope deployment, repair and exact teardown consistently", async (t) => {
+  for (const resourceGroup of ["NP-PHPToProof-Dev-EastUS2-team42", "rg-p2s-demo1234-dev"]) {
+    await t.test(resourceGroup, async () => {
+      const config = configuration("deploy", { resourceGroup, yes: true });
+      const h = harness(config, { absent: true });
+      await execute(config, h.dependencies);
+      await execute({ ...config, command: "repair" }, h.dependencies);
+      for (const args of h.calls) {
+        if (args[0] === "deployment" && ["what-if", "create"].includes(args[2])) {
+          assert.ok(args.includes(`groupName=${resourceGroup}`));
+        }
+        if (args.includes("--resource-group")) {
+          assert.equal(args[args.indexOf("--resource-group") + 1], resourceGroup);
+        }
+        if (args[0] === "group") assert.equal(args[args.indexOf("--name") + 1], resourceGroup);
+      }
+      const result = await execute({ ...config, command: "uninstall", confirmation: resourceGroup }, h.dependencies);
+      assert.equal(result.deleted, resourceGroup);
+      assert.deepEqual(h.calls.filter((args) => args.includes("delete")),
+        [["group", "delete", "--name", resourceGroup, "--yes"]]);
+    });
+  }
+});
+
 test("repair is idempotent and does not reopen fixed endpoints or extend expiry", async () => {
   const config = configuration("repair", { yes: true });
   const h = harness(config, { pricingTier: "Standard", tags: {

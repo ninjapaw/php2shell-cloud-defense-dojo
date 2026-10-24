@@ -24,6 +24,10 @@ const only = (type) => {
   return matches[0];
 };
 assert.deepEqual(root.parameters.environmentName.allowedValues, ["dev"]);
+assert.equal(root.parameters.groupName.type, "string");
+assert.equal(root.parameters.groupName.minLength, 1);
+assert.equal(root.parameters.groupName.maxLength, 90);
+assert.ok(!Object.hasOwn(root.parameters.groupName, "defaultValue"), "The group name must come from configuration.");
 assert.equal(root.parameters.enableDefenderCspm.defaultValue, false);
 assert.equal(root.parameters.enableSentinel.defaultValue, false);
 assert.equal(root.parameters.enableAnalytics.defaultValue, false);
@@ -33,13 +37,22 @@ for (const resource of Object.values(root.resources)) {
   if (resource.type === "Microsoft.Resources/resourceGroups") continue;
   assert.equal(resource.type, "Microsoft.Resources/deployments");
   if (resource.resourceGroup) {
-    assert.equal(resource.resourceGroup, "[variables('groupName')]");
+    assert.equal(resource.resourceGroup, "[parameters('groupName')]");
   } else {
     assert.equal(resource.condition, "[parameters('enableDefenderCspm')]");
     assert.deepEqual(Object.values(resource.properties.template.resources).map((entry) => entry.type), ["Microsoft.Security/pricings"]);
   }
 }
-assert.equal(only("Microsoft.Resources/resourceGroups").resource.name, "[variables('groupName')]");
+assert.equal(only("Microsoft.Resources/resourceGroups").resource.name, "[parameters('groupName')]");
+for (const [tag, parameter] of [
+  ["dojo.defenderCspmExpected", "defenderCspmExpected"],
+  ["dojo.sentinel", "enableSentinel"],
+  ["dojo.analytics", "enableAnalytics"],
+  ["dojo.customDomainReady", "associateCustomDomain"],
+]) {
+  assert.equal(root.variables.tags[tag], `[if(parameters('${parameter}'), 'true', 'false')]`,
+    "Boolean ownership tags must remain lowercase strings after ARM evaluation.");
+}
 assert.equal(find("Microsoft.Authorization/roleAssignments").length, 0);
 assert.equal(find("Microsoft.KeyVault/vaults/secrets").length, 0);
 const pricing = only("Microsoft.Security/pricings");

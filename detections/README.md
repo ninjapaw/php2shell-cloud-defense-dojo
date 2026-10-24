@@ -1,4 +1,4 @@
-# Defensive investigation content
+# PHP to Proof: defensive investigation content
 
 The six original lab queries below are self-contained. They include an empty typed source with
 `union isfuzzy=true`; a missing optional table produces a Kusto warning and no

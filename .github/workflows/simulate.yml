@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: php2shell-dev-${{ vars.LAB_SUFFIX }}
+  group: php2shell-dev
   cancel-in-progress: false
 
 jobs:

@@ -1,4 +1,4 @@
-# PHP2Shell hunting coverage and evaluation
+# PHP to Proof: PHP2Shell hunting coverage and evaluation
 
 This dojo incorporates the investigation coverage of
 [cseelhoff-ms/php2shell-hunting-pack](https://github.com/cseelhoff-ms/php2shell-hunting-pack/tree/15baae8d25e631ac2223f904f4d0a0f4cf08d703),

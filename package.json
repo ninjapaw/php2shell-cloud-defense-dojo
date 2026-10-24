@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Disposable, defensive-only PHP, Defender CSPM, Azure WAF, and Sentinel training lab.",
+  "description": "PHP to Proof: an evidence-led, defensive-only PHP, Defender CSPM, Azure WAF, and Sentinel investigation story.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=24.19.0 <25"
@@ -15,6 +15,8 @@
     "prepare:products": "node scripts/prepare-products.mjs",
     "plan": "node scripts/dojo.mjs plan",
     "container:lab": "node scripts/container-lab.mjs",
+    "cloud:bundle": "node scripts/cloud-runner.mjs bundle",
+    "cloud:verify": "node scripts/cloud-runner.mjs verify-template",
     "doctor": "node scripts/dojo.mjs doctor",
     "github:check": "node scripts/check-github.mjs",
     "vendor:check": "node scripts/check-vendor.mjs",

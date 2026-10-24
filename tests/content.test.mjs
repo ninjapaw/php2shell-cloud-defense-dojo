@@ -5,10 +5,32 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseDocument } from "yaml";
 import { ROOT } from "../scripts/dojo.mjs";
+import { SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../scripts/lib/config.mjs";
 import { githubEnvironmentSubject } from "../vendor/pawprint/scripts/github-oidc-subject.mjs";
 
 const workflowDirectory = join(ROOT, ".github", "workflows");
 const workflows = readdirSync(workflowDirectory).filter((name) => name.endsWith(".yml"));
+
+test("PHP to Proof branding is consistent while technical identities stay stable", () => {
+  for (const file of [
+    "README.md", "docs/investigation.md", "docs/operations.md",
+    "docs/container-lab.md", "docs/hunting-pack.md", "docs/walkthrough.md", "detections/README.md",
+  ]) {
+    assert.match(readFileSync(join(ROOT, file), "utf8"), /^# PHP to Proof\b/, file);
+  }
+  const metadata = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+  assert.match(metadata.description, /^PHP to Proof:/);
+  assert.equal(metadata.name, "php2shell-cloud-defense-dojo");
+  assert.equal(SCENARIO, "php2shell-cloud-defense-dojo");
+  assert.match(readFileSync(join(ROOT, "container-lab/index.php"), "utf8"),
+    /<title>PHP to Proof \| Isolated runtime assessment<\/title>/);
+  const sentinel = readFileSync(join(ROOT, "infra/modules/sentinel.bicep"), "utf8");
+  assert.ok(sentinel.includes(`displayName: '${SENTINEL_RULE_DISPLAY_NAME}'`));
+  assert.match(sentinel, /name: guid\(workspace\.id, 'php2shell-synthetic-correlation'\)/);
+  const settings = JSON.parse(readFileSync(join(ROOT, "config/dev.json"), "utf8"));
+  assert.equal(settings.customDomain, "php2proof.ninjapaws.org");
+  assert.ok(readFileSync(join(ROOT, "README.md"), "utf8").includes(settings.customDomain));
+});
 
 test("Git preserves LF for every linted text type even on Windows checkouts", () => {
   const files = [
@@ -36,7 +58,7 @@ test("all workflows are manual-only, dev-bound, pinned, and protect credentials"
     assert.deepEqual(workflow.on.workflow_dispatch.inputs.environment.options, ["dev"]);
     assert.equal(workflow.permissions.contents, "read");
     if (name !== "validate.yml") {
-      assert.equal(workflow.concurrency.group, "php2shell-dev-${{ vars.LAB_SUFFIX }}");
+      assert.equal(workflow.concurrency.group, "php2shell-dev");
       assert.equal(workflow.concurrency["cancel-in-progress"], false);
     }
     for (const job of Object.values(workflow.jobs)) {

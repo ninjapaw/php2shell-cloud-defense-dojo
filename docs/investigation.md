@@ -1,7 +1,12 @@
-# Investigation: facts, synthetic evidence, and unknowns
+# PHP to Proof: the investigation story
+
+For the complete guided sequence, component comparison, and expected results,
+start with [the walkthrough](walkthrough.md). The public dashboard also exposes
+the read-only story at `/walkthrough.php`; this guide supplies deeper evidence
+and product-specific pivots.
 
 Use the simulator's run ID, UTC start/end, exact app resource ID, edge profile
-and lab workspace. The demo story is:
+and lab workspace. **PHP to Proof: A Code-to-Cloud Defense Story** follows:
 
 **Discover -> inspect exposure -> review available attack paths -> observe bounded
 activity -> correlate -> validate WAF Prevention -> remove training surfaces ->

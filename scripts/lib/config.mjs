@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import { validateDomain } from "../../vendor/pawprint/scripts/cloudflare-dns.mjs";
 
 export const SCENARIO = "php2shell-cloud-defense-dojo";
-export const SENTINEL_RULE_DISPLAY_NAME = "PHP2Shell dojo - SYNTHETIC multi-signal training correlation";
+export const SENTINEL_RULE_DISPLAY_NAME = "PHP to Proof - SYNTHETIC multi-signal training correlation";
 export const COMMANDS = [
   "plan", "doctor", "deploy", "validate", "simulate", "investigate",
   "protect", "remediate", "repair", "uninstall", "domain", "domain-check",
@@ -19,12 +19,17 @@ export function parseConfigJson(text) {
 }
 
 export function validateConfig(config) {
-  const keys = ["environment", "location", "ttlHours", "phpVersion", "customDomain"];
+  const keys = ["environment", "resourceGroup", "location", "ttlHours", "phpVersion", "customDomain"];
   if (!config || typeof config !== "object" || Array.isArray(config)
       || Object.keys(config).some((key) => !keys.includes(key))) {
     throw new Error("Configuration must be an object containing only the documented dev settings.");
   }
   if (config.environment !== "dev") throw new Error("Only the dev training environment is supported.");
+  if (typeof config.resourceGroup !== "string" || config.resourceGroup !== config.resourceGroup.trim()
+      || !/^[A-Za-z0-9][A-Za-z0-9_.()-]{0,89}$/.test(config.resourceGroup)
+      || config.resourceGroup.endsWith(".")) {
+    throw new Error("resourceGroup must be a 1-90 character Azure group name starting with a letter/digit, containing only letters, digits, underscores, periods, parentheses or hyphens, and not ending in a period.");
+  }
   if (typeof config.location !== "string" || !/^[a-z][a-z0-9]{2,31}$/.test(config.location)) {
     throw new Error("location must be an Azure region identifier.");
   }
@@ -104,7 +109,7 @@ export function parseInvocation(args, config, environment = process.env) {
 
 export function names(config) {
   const base = `p2s-${config.suffix}`;
-  const group = `rg-${base}-dev`;
+  const group = config.resourceGroup;
   const groupId = config.subscription ? `/subscriptions/${config.subscription}/resourceGroups/${group}` : undefined;
   return {
     group, groupId,

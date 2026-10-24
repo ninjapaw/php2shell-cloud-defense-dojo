@@ -5,7 +5,7 @@ import { names, parseInvocation } from "../scripts/lib/config.mjs";
 import { configuration, DEFAULT_CONFIG, harness, SUBSCRIPTION } from "./support/harness.mjs";
 
 function domainHarness(options = {}) {
-  const config = configuration("domain", { yes: true, customDomain: "php-lab.example.org", ...options.config });
+  const config = configuration("domain", { yes: true, customDomain: "php2proof.example.org", ...options.config });
   const h = harness(config, options);
   const records = [];
   const writes = [];
@@ -46,10 +46,10 @@ test("DNS is opt-in and custom-domain intent cannot override a simulator or norm
       command, "--suffix", "demo1234", "--subscription", SUBSCRIPTION, "--custom-domain", "arbitrary.example.org",
     ], DEFAULT_CONFIG, {}), /simulation targets cannot be overridden/);
   }
-  const plan = await execute(configuration("plan", { customDomain: "php-lab.example.org" }), { log() {} });
+  const plan = await execute(configuration("plan", { customDomain: "php2proof.example.org" }), { log() {} });
   assert.equal(plan.initialState.customDomainName, "");
   assert.equal(plan.initialState.associateCustomDomain, false);
-  assert.equal(plan.dns.customDomain, "php-lab.example.org");
+  assert.equal(plan.dns.customDomain, "php2proof.example.org");
   assert.match(plan.dns.activation, /separate domain --yes/);
 });
 
@@ -70,7 +70,7 @@ test("Front Door domain lifecycle validates DNS before route/WAF association and
   const expiry = h.state.group.tags["pawprint.expiresAt"];
   const result = await execute(h.config, h.dependencies);
   assert.equal(result.validated, true);
-  assert.equal(result.customDomain, "https://php-lab.example.org");
+  assert.equal(result.customDomain, "https://php2proof.example.org");
   assert.equal(result.directOriginBlocked, true);
   assert.equal(creates(h).length, 2);
   assert.ok(creates(h)[0].includes("associateCustomDomain=false"));
@@ -83,7 +83,7 @@ test("Front Door domain lifecycle validates DNS before route/WAF association and
   assert.equal(h.state.group.tags["pawprint.expiresAt"], expiry);
   assert.equal(h.state.packaged, 0);
   assert.equal(h.requests.length, 6);
-  assert.ok(h.requests.some((request) => request.url === "https://php-lab.example.org/health.php"));
+  assert.ok(h.requests.some((request) => request.url === "https://php2proof.example.org/health.php"));
   assert.ok(h.logs.every((line) => !line.includes(h.token)));
 });
 
@@ -118,11 +118,11 @@ test("repair and remediation preserve the exact domain, original expiry, and Pre
   h.dependencies.environment = {};
   for (const command of ["repair", "remediate"]) {
     const result = await execute({ ...h.config, command, customDomain: "" }, h.dependencies);
-    assert.equal(result.customDomain, "https://php-lab.example.org");
+    assert.equal(result.customDomain, "https://php2proof.example.org");
     assert.equal(result.state, "fixed");
     assert.equal(result.wafMode, "Prevention");
     assert.equal(h.state.group.tags["pawprint.expiresAt"], expiry);
-    assert.ok(creates(h).at(-1).includes("customDomainName=php-lab.example.org"));
+    assert.ok(creates(h).at(-1).includes("customDomainName=php2proof.example.org"));
     assert.ok(creates(h).at(-1).includes("associateCustomDomain=true"));
   }
 });

@@ -16,7 +16,7 @@ export function sameId(actual, expected) {
 
 export function assertOwnedGroup(group, config) {
   const expected = names(config);
-  if (!group || group.name !== expected.group || !sameId(group.id, expected.groupId)
+  if (!group || !sameId(group.name, expected.group) || !sameId(group.id, expected.groupId)
       || group.tags?.["dojo.scenario"] !== SCENARIO
       || group.tags?.["dojo.suffix"] !== config.suffix
       || group.tags?.["pawprint.managed"] !== "true"
@@ -58,7 +58,7 @@ export function desiredState(config, group, now = new Date()) {
   const wafMode = ["protect", "remediate"].includes(config.command) || fixed
     ? "Prevention" : config.wafMode ?? previousMode ?? "Detection";
   if (config.wafMode === "Detection" && (fixed || previousMode === "Prevention")) {
-    throw new Error("Downgrading a protected/remediated lab to Detection is not supported; use a new isolated suffix.");
+    throw new Error("Downgrading a protected/remediated lab to Detection is not supported; use a new isolated resource group and suffix.");
   }
   const sentinel = config.enableSentinel || tags?.["dojo.sentinel"] === "true";
   const analytics = config.enableAnalytics || tags?.["dojo.analytics"] === "true";

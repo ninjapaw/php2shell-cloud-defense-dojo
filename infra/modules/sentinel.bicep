@@ -19,7 +19,7 @@ resource correlation 'Microsoft.SecurityInsights/alertRules@2025-09-01' = {
   scope: workspace
   kind: 'Scheduled'
   properties: {
-    displayName: 'PHP2Shell dojo - SYNTHETIC multi-signal training correlation'
+    displayName: 'PHP to Proof - SYNTHETIC multi-signal training correlation'
     description: 'Correlates a benign WAF marker with labelled synthetic PHP events. Not a Defender alert, verified CVE finding, process execution, outbound connection, or proof of compromise. Review resource, run ID and timestamps.'
     severity: 'Informational'
     enabled: enableAnalytics

@@ -1,4 +1,4 @@
-# Isolated affected-runtime container lab
+# PHP to Proof: isolated affected-runtime comparison
 
 This is a **separate, explicitly opted-in dev deployment**. The original App
 Service/WAF lab and its synthetic events remain unchanged. This comparison

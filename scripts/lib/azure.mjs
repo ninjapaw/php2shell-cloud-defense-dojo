@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { redact } from "./safety.mjs";
+import { redact, sameId } from "./safety.mjs";
 
 export function runTool(command, args, options = {}) {
   if (process.platform === "win32" && command === "az") {
@@ -20,15 +20,32 @@ export function runTool(command, args, options = {}) {
 export function createAzureClient(config, runner = runTool) {
   return (args) => {
     const subscriptionArgs = args[0] === "account" || args[0] === "cloud" ? [] : ["--subscription", config.subscription];
-    const text = runner("az", [...args, ...subscriptionArgs, "--only-show-errors", "--output", "json"], {
-      env: { ...process.env, AZURE_EXTENSION_USE_DYNAMIC_INSTALL: "no", AZURE_CORE_COLLECT_TELEMETRY: "false" },
-    });
-    if (!text.trim()) return null;
+    const whatIfArgs = args[0] === "deployment" && args[2] === "what-if" && !args.includes("--no-pretty-print")
+      ? ["--no-pretty-print"] : [];
+    let text;
     try {
-      return JSON.parse(text);
+      text = runner("az", [...args, ...whatIfArgs, ...subscriptionArgs, "--only-show-errors", "--output", "json"], {
+        env: { ...process.env, AZURE_EXTENSION_USE_DYNAMIC_INSTALL: "no", AZURE_CORE_COLLECT_TELEMETRY: "false" },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Azure ${args.slice(0, 3).join(" ")}: ${redact(message)}`);
+    }
+    if (!text.trim()) return null;
+    let value;
+    try {
+      value = JSON.parse(text);
     } catch {
       throw new Error("Azure CLI returned invalid JSON; response omitted to avoid leaking diagnostics.");
     }
+    if (args[0] === "webapp" && args[1] === "show" && value?.appServicePlanId != null) {
+      if (typeof value.appServicePlanId !== "string" || !value.appServicePlanId.length
+          || (value.serverFarmId != null && !sameId(value.serverFarmId, value.appServicePlanId))) {
+        throw new Error("Azure CLI returned invalid or conflicting App Service plan identifiers.");
+      }
+      value.serverFarmId = value.appServicePlanId;
+    }
+    return value;
   };
 }
 

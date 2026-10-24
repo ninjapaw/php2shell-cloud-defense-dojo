@@ -1,6 +1,8 @@
-# PHP2Shell Cloud Defense Dojo
+# PHP to Proof
 
-**A disposable, defensive-only Azure investigation lab.**
+**A Code-to-Cloud Defense Story.**
+
+A disposable, defensive-only Azure investigation lab.
 
 > **TRAINING ONLY.** Use an isolated, authorized Azure training subscription.
 > Never use production resources, real sensitive data, or untrusted targets.
@@ -12,6 +14,32 @@
 > **Independent community project.** Not a Microsoft product, endorsement,
 > assessment, or official security guide. See [DISCLAIMER.md](DISCLAIMER.md),
 > [SECURITY.md](SECURITY.md), and the [license placeholder](LICENSE).
+
+**PHP to Proof** is the public story name. `php2shell-cloud-defense-dojo`
+remains the repository/package and technical scenario identifier. Child resource
+names, ownership tags, health responses, and correlation keys remain stable.
+PHP2Shell remains the advisory and hunting topic, not a claim of exploitation.
+
+The **PUBLIC DEMO** badge describes the site's public availability, not a
+production Azure environment. The deployment remains a dev-only training lab
+with its existing safety gates and synthetic endpoints. Publishing the story
+does not make the lab suitable for production workloads or real sensitive data.
+The live site uses App Service's default (production) slot; `dev` is the lab's
+logical environment, not a staging-slot indicator.
+
+## Start the guided walkthrough
+
+Open **Walkthrough** in the dashboard navigation, or visit `/walkthrough.php`
+on the same deployed host. The [complete operator walkthrough](docs/walkthrough.md)
+provides the terminal steps, before/after expectations, component comparison,
+presenter prompts, troubleshooting, and cleanup.
+
+Like Pawton's guided story, each chapter compares what you can investigate
+without additional Defender components and what supported, enabled components
+can add. Unlike a live workload-detector demonstration, the PHP process,
+outbound, error, and canary signals are synthetic. The guide does not promise
+Defender alerts or show unqueried plan status as off. It is read-only, works
+without JavaScript, and never enables a plan or runs a simulation.
 
 ## Learning objectives and evidence boundaries
 
@@ -40,8 +68,20 @@ flowchart LR
     CSPM["Optional subscription-wide Defender CSPM"] -.->|Actual assessments, if available| Investigation["Cloud Security Explorer / Resource Graph"]
 ```
 
-One deterministic `rg-p2s-SUFFIX-dev` resource group owns the workload, WAF,
-global Front Door profile, logs, Application Insights, and optional Sentinel.
+The required `resourceGroup` in [dev configuration](config/dev.json) selects
+**`NP-PHPToProof-Dev-CentralUS`**, following the other projects'
+`NP-<Workload>-<Environment>-<Region>` convention. This one group owns the
+workload, WAF, global Front Door profile, logs, Application Insights, and optional
+Sentinel. The CLI passes the same name into Bicep and uses it for every resource
+ID, ownership check, and teardown confirmation; it is not derived from the suffix.
+
+One suffix owns the configured group at a time. For another isolated run or a
+different region, explicitly update the group name in JSON too. Changing that
+setting selects a different target; it never renames, moves, or deletes existing
+Azure resources. To operate an older `rg-p2s-SUFFIX-dev` lab, retain its exact name
+in `resourceGroup` and its original suffix/location. The separate private
+container lab keeps its own `rg-p2sc-SUFFIX-dev` group.
+
 Shared Bicep comes from [Pawprint](https://github.com/ninjapaw/pawprint), with
 content hashes and upstream MIT attribution included under [vendor/](vendor/).
 Pawton's plan/doctor/deploy/repair/uninstall pattern informed the lifecycle.
@@ -70,14 +110,35 @@ zone. Set `DOJO_CUSTOM_DOMAIN` (or the optional `customDomain` in
 [dev configuration](config/dev.json)); `--custom-domain` is accepted only by
 `plan`, `domain`, and `domain-check`.
 
+The configured story hostname is **`php2proof.ninjapaws.org`** in the Cloudflare
+zone **`ninjapaws.org`**. This setting declares the requested domain; it does not
+claim DNS ownership, route/WAF association, or managed TLS is ready. The default
+Azure endpoint remains available while the custom domain is activated.
+
 ```bash
-export DOJO_CUSTOM_DOMAIN=php-lab.example.org
+export DOJO_CUSTOM_DOMAIN=php2proof.ninjapaws.org
+export CLOUDFLARE_ZONE_NAME=ninjapaws.org
 bash scripts/dojo.sh plan --environment dev
 # Load CLOUDFLARE_API_TOKEN securely into the environment; never pass it as an argument.
-# Set CLOUDFLARE_ZONE_NAME or CLOUDFLARE_ZONE_ID for the exact authorized zone.
+# Alternatively, set CLOUDFLARE_ZONE_ID for this exact authorized zone.
 bash scripts/dojo.sh domain --environment dev --yes
 bash scripts/dojo.sh domain-check --environment dev
 ```
+
+For manual Cloudflare entry, the record names below are relative to your zone:
+
+| Type | Name | Target / content | Setting |
+| --- | --- | --- | --- |
+| CNAME | `php2proof` | This run's actual Front Door endpoint `properties.hostName`, ending in `azurefd.net` | DNS only; CNAME flattening off |
+| TXT | `_dnsauth.php2proof` | The validation token generated by Azure for this custom domain | DNS only |
+
+Use only the hostname in the CNAME target, without `https://` or a path. Do not
+guess Azure's generated endpoint suffix or point DNS at the restricted
+`azurewebsites.net` origin. DNS alone is insufficient: Azure ownership
+validation, HTTPS route/WAF association, and managed TLS must also be ready.
+If the public App Service/Front Door lab has not been deployed, there is no
+CNAME target yet. The isolated affected-runtime container lab intentionally
+has no public ingress and must not be used as the public site's DNS target.
 
 The token needs **Zone Read + DNS Edit** for that zone only. `domain` is a
 separate explicit write: it previews/creates the pending Front Door domain,
@@ -167,6 +228,7 @@ php -S 127.0.0.1:8080 -t app
 
 Open `http://127.0.0.1:8080`; stop the server with Ctrl+C. This is a local UI
 preview, not cloud evidence, WAF validation, or Defender onboarding.
+The guided story is at `http://127.0.0.1:8080/walkthrough.php`.
 
 ## Plan -> investigate -> close the loop
 
@@ -240,13 +302,15 @@ Standard; restoring it requires a new explicit `--enable-defender-cspm`.
 
 ## Investigation guides
 
+- **Full walkthrough:** [mission briefing, steps, with/without component matrix,
+  expected evidence, presenter prompts, and troubleshooting](docs/walkthrough.md).
 - **Defender CSPM:** [actual assessments, search terms, Cloud Security Explorer,
   sensitive data, permissions, exposure and attack-path pivots](docs/investigation.md#defender-cspm).
 - **Azure WAF:** [managed-rule configuration, benign custom rule, run correlation,
   Detection/Prevention, and origin bypass tests](docs/investigation.md#azure-waf).
 - **Microsoft Sentinel:** [hunting queries, synthetic rule and optional runtime
   telemetry](docs/investigation.md#microsoft-sentinel).
-- **PHP2Shell hunting pack:** [all 10 asset-discovery methods, Hunts A-G,
+- **PHP to Proof hunting pack (PHP2Shell):** [all 10 asset-discovery methods, Hunts A-G,
   platform-specific queries and evidence evaluation](docs/hunting-pack.md),
   with a [machine-readable catalog](detections/catalog.json). The reviewed
   upstream revision is pinned; no estate queries, scans, telemetry onboarding
@@ -299,12 +363,13 @@ credential caches, tokens, or deployment outputs are uploaded. See
 
 ## Complete teardown
 
-Keep the same subscription, region, and suffix. Type the exact name; `--yes`
-cannot bypass this:
+Keep the same JSON `resourceGroup`, subscription, region, and suffix. Review the
+offline plan and type that exact group name; `--yes` cannot bypass this. For the
+checked-in configuration:
 
 ```bash
 bash scripts/dojo.sh uninstall --environment dev \
-  --confirm-resource-group "rg-p2s-${DOJO_SUFFIX}-dev"
+  --confirm-resource-group "NP-PHPToProof-Dev-CentralUS"
 ```
 
 The command checks exact resource ID and ownership tags, deletes **only that

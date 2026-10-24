@@ -4,6 +4,11 @@ targetScope = 'subscription'
 @allowed(['dev'])
 param environmentName string = 'dev'
 
+@description('Exact isolated dev resource-group name from config/dev.json. The CLI checks existing ownership before deployment.')
+@minLength(1)
+@maxLength(90)
+param groupName string
+
 @description('User-chosen lowercase alphanumeric suffix; use the same value throughout the lifecycle.')
 @minLength(4)
 @maxLength(12)
@@ -54,7 +59,6 @@ param customDomainName string = ''
 @description('Preserve an established association on repair. Enable initially only after DNS and Azure domain approval.')
 param associateCustomDomain bool = false
 
-var groupName = 'rg-p2s-${suffix}-${environmentName}'
 var tags = {
   'pawprint.managed': 'true'
   'pawprint.runId': 'php2shell-${suffix}-${environmentName}'
@@ -66,11 +70,11 @@ var tags = {
   'dojo.suffix': suffix
   'dojo.state': labState
   'dojo.wafMode': wafMode
-  'dojo.defenderCspmExpected': string(defenderCspmExpected)
-  'dojo.sentinel': string(enableSentinel)
-  'dojo.analytics': string(enableAnalytics)
+  'dojo.defenderCspmExpected': defenderCspmExpected ? 'true' : 'false'
+  'dojo.sentinel': enableSentinel ? 'true' : 'false'
+  'dojo.analytics': enableAnalytics ? 'true' : 'false'
   'dojo.customDomain': customDomainName
-  'dojo.customDomainReady': string(associateCustomDomain)
+  'dojo.customDomainReady': associateCustomDomain ? 'true' : 'false'
 }
 
 resource group 'Microsoft.Resources/resourceGroups@2025-04-01' = {

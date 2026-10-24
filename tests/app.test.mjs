@@ -57,9 +57,14 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     const page = await fetch(app.base);
     const html = await page.text();
     assert.equal(page.status, 200);
+    assert.match(html, /<title>PHP to Proof \| Code-to-Cloud Defense Story<\/title>/);
+    assert.match(html, /<h1>PHP to Proof\.<br>/);
     assert.match(html, /TRAINING ONLY/);
+    assert.match(html, /class="badge">PUBLIC DEMO<\/span>/);
+    assert.doesNotMatch(html, /class="badge">DEV ONLY<\/span>/);
     assert.match(html, /SYNTHETIC SIGNALS AVAILABLE/);
     assert.match(html, /No assessment, runtime alert, or attack path is fabricated/);
+    assert.match(html, /href="\/walkthrough\.php"/);
     assert.match(page.headers.get("content-security-policy"), /default-src 'none'/);
     assert.equal(page.headers.get("cache-control"), "no-store");
     assert.equal((await fetch(`${app.base}/assets/style.css`)).status, 200);
@@ -69,6 +74,41 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.equal(health.environment, "dev");
     assert.equal(health.syntheticEndpointsEnabled, true);
     assert.match(health.phpVersion, /^8\.[45]\./);
+  });
+  await t.test("guided walkthrough is complete, navigable and honest about unqueried plans", async () => {
+    const response = await fetch(`${app.base}/walkthrough.php`);
+    const html = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(html, /<title>PHP to Proof \| Guided Walkthrough<\/title>/);
+    assert.match(html, /class="badge">PUBLIC DEMO<\/span>/);
+    assert.match(html, /TRAINING ONLY/);
+    assert.doesNotMatch(html, /class="badge">DEV ONLY<\/span>/);
+    assert.match(html, /Application state: training/);
+    assert.match(html, /Defender and Sentinel status: not queried by this page/);
+    assert.match(html, /Foundational CSPM/);
+    assert.match(html, /Serverless protection/);
+    assert.match(html, /With paid Defender CSPM/);
+    assert.match(html, /Without paid Defender CSPM/);
+    assert.match(html, /incident creation is disabled/);
+    assert.match(html, /without the WAF marker/);
+    assert.match(html, /at least two distinct synthetic app signals/);
+    assert.doesNotMatch(html, /<script\b|<form\b|<iframe\b/i);
+    assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.ok(Buffer.byteLength(html, "utf8") < 64 * 1024, "Guide must fit the bounded HTTP reader.");
+    const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+    assert.equal(new Set(ids).size, ids.length, "Guide IDs must be unique.");
+    for (const match of html.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.includes(match[1]), match[1]);
+    for (const id of ["briefing", "components", "baseline", "request", "correlate", "posture",
+      "sentinel", "protect", "remediate", "containers", "debrief", "glossary"]) {
+      assert.ok(ids.includes(id), id);
+    }
+    assert.ok(!app.logs().includes("DOJO_EVENT "), "Reading the guide must not run a simulation.");
+    for (const query of ["enable-defender=true", "target=https://example.invalid", "signal[]=request"]) {
+      const rejected = await fetch(`${app.base}/walkthrough.php?${query}`);
+      assert.equal(rejected.status, 400);
+      assert.match((await rejected.json()).error, /accepts no training inputs/);
+    }
   });
   await t.test("all five signals return labelled fixtures and structured log events", async () => {
     for (const signal of ["request", "php-error", "process-synthetic", "outbound-synthetic", "canary"]) {
@@ -107,7 +147,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     }
   });
   await t.test("writes are rejected and HEAD is supported without a response body", async () => {
-    for (const path of ["/index.php", "/health.php"]) {
+    for (const path of ["/index.php", "/health.php", "/walkthrough.php"]) {
       const rejected = await fetch(`${app.base}${path}`, { method: "POST" });
       assert.equal(rejected.status, 405);
       assert.equal(rejected.headers.get("allow"), "GET, HEAD");
@@ -121,7 +161,12 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
 test("real PHP fixed state removes every synthetic scenario surface", async (t) => {
   const app = await startPhp("fixed");
   t.after(app.stop);
-  assert.match(await (await fetch(app.base)).text(), /FIXED STATE \/ TRAINING SURFACES REMOVED/);
+  const html = await (await fetch(app.base)).text();
+  assert.match(html, /<title>PHP to Proof \| Code-to-Cloud Defense Story<\/title>/);
+  assert.match(html, /FIXED STATE \/ TRAINING SURFACES REMOVED/);
+  const walkthrough = await (await fetch(`${app.base}/walkthrough.php`)).text();
+  assert.match(walkthrough, /Application state: fixed/);
+  assert.match(walkthrough, /Training endpoints have been removed/);
   const health = await (await fetch(`${app.base}/health.php`)).json();
   assert.equal(health.state, "fixed");
   assert.equal(health.syntheticEndpointsEnabled, false);
@@ -137,6 +182,7 @@ test("PHP rejects production and unknown configuration with an explicit error", 
   const response = await fetch(`${app.base}/health.php`);
   assert.equal(response.status, 503);
   assert.match((await response.json()).error, /configuration is invalid/);
+  assert.equal((await fetch(`${app.base}/walkthrough.php`)).status, 503);
   await delay(30);
   assert.match(app.logs(), /DOJO_CONFIGURATION_ERROR/);
 });
@@ -146,7 +192,7 @@ test("PHP rejects explicitly empty and zero-like settings instead of reopening t
     await t.test(`state=${JSON.stringify(state)}, environment=${JSON.stringify(environment)}`, async (t) => {
       const app = await startPhp(state, environment);
       t.after(app.stop);
-      for (const path of ["/health.php", `/index.php?signal=request&runId=${RUN_ID}`]) {
+      for (const path of ["/health.php", "/walkthrough.php", `/index.php?signal=request&runId=${RUN_ID}`]) {
         const response = await fetch(`${app.base}${path}`);
         assert.equal(response.status, 503);
         assert.match((await response.json()).error, /configuration is invalid/);
@@ -157,7 +203,7 @@ test("PHP rejects explicitly empty and zero-like settings instead of reopening t
 });
 
 test("PHP source contains no process, evaluation, egress or Azure token operations", () => {
-  for (const file of ["index.php", "health.php", "lab.php"]) {
+  for (const file of ["index.php", "walkthrough.php", "health.php", "lab.php"]) {
     const source = readFileSync(join(ROOT, "app", file), "utf8");
     assert.doesNotMatch(source, /\b(?:shell_exec|exec|system|passthru|eval|assert|proc_open|popen|fsockopen|curl_exec|socket_connect)\s*\(/i);
     assert.doesNotMatch(source, /169\.254\.169\.254|IDENTITY_ENDPOINT|MSI_ENDPOINT/);

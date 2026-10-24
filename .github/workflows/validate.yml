@@ -72,3 +72,5 @@ jobs:
           done < <(find infra vendor/pawprint/modules -name '*.bicep' -print0)
           az bicep build --file infra/main.bicep --outfile "$RUNNER_TEMP/lab.json"
           npm run infra:check -- "$RUNNER_TEMP/lab.json"
+          az bicep build --file infra/deploy-runner-job.bicep --outfile "$RUNNER_TEMP/cloud-job.json"
+          npm run cloud:verify -- "$RUNNER_TEMP/cloud-job.json"
