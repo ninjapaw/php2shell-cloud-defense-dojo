@@ -37,6 +37,11 @@ if source["kind"] == "release":
                           "operator/control.mjs", "operator/azure.mjs", "operator/server.mjs"])
 elif source["kind"] == "module":
     allowed = {"operator/hunts.mjs"}
+elif source["kind"] == "public-walkthrough-maintenance":
+    allowed = {"app/walkthrough.php"}
+    page = files.get("app/walkthrough.php")
+    if not isinstance(page, str) or len(page) > 65536 or not page.startswith("<?php") or "/evidence/response" not in page:
+        raise ValueError("Reviewed public walkthrough rejected.")
 elif source["kind"] == "response-maintenance":
     allowed = {"scripts/lib/response.mjs", "scripts/response.mjs", "operator/response.mjs",
                "operator/config.mjs", "operator/control.mjs", "operator/server.mjs",
@@ -59,7 +64,7 @@ if source["kind"] == "release" and datetime.datetime.now(datetime.timezone.utc) 
 root = pathlib.Path(os.environ["HUNT_PUBLICATION_ROOT"])
 with zipfile.ZipFile(root / "hunting.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for name, value in files.items():
-        archive.writestr(name, value)
+        archive.writestr(name.removeprefix("app/") if source["kind"] == "public-walkthrough-maintenance" else name, value)
 (root / "kind.txt").write_text(source["kind"])
 print(json.dumps({"verifiedSource": True, "kind": source["kind"], "files": len(files), "sha256": os.environ["SOURCE_SHA256"]}))
 PY
@@ -67,10 +72,23 @@ az login --identity --client-id "$PUBLISHER_CLIENT_ID" --allow-no-subscriptions 
 az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 [[ "$(az group show --name "$OPERATOR_GROUP" --query "tags.\"pawprint.expiresAt\"" --output tsv)" == "$ORIGINAL_EXPIRY" ]] || { echo 'Original operator lifetime drifted.' >&2; exit 1; }
 [[ "$(az group show --name "$OPERATOR_GROUP" --query "tags.\"dojo.scenario\"" --output tsv)" == php2proof-operator ]] || { echo 'Operator ownership drifted.' >&2; exit 1; }
-az webapp deploy --resource-group "$OPERATOR_GROUP" --name "p2p-${DOJO_SUFFIX}-operator" \
+kind="$(cat "${work}/kind.txt")"
+target_group="$OPERATOR_GROUP"
+target_app="p2p-${DOJO_SUFFIX}-operator"
+if [[ "$kind" == public-walkthrough-maintenance ]]; then
+  target_group="$MAIN_GROUP"
+  target_app="p2s-${DOJO_SUFFIX}-app"
+  [[ "$(az webapp show --resource-group "$target_group" --name "$target_app" --query "tags.\"pawprint.expiresAt\"" --output tsv)" == "$ORIGINAL_EXPIRY" ]] || { echo 'Public application lifetime drifted.' >&2; exit 1; }
+  [[ "$(az webapp show --resource-group "$target_group" --name "$target_app" --query "tags.\"dojo.scenario\"" --output tsv)" == php2shell-cloud-defense-dojo ]] || { echo 'Public application ownership drifted.' >&2; exit 1; }
+else
+  [[ "$(az webapp config appsettings list --resource-group "$target_group" --name "$target_app" --query "[?name=='OPERATOR_INITIALIZE'].value | [0]" --output tsv)" == false ]] || { echo 'Credential initialization must remain disabled.' >&2; exit 1; }
+  [[ -z "$(az webapp config appsettings list --resource-group "$target_group" --name "$target_app" --query "[?name=='OPERATOR_HUNT_CAPTURE_ID'].value | [0]" --output tsv)" ]] || { echo 'Hunting capture must remain disabled.' >&2; exit 1; }
+  writes="$(az webapp config appsettings list --resource-group "$target_group" --name "$target_app" --query "[?name=='OPERATOR_RESPONSE_WRITES'].value | [0]" --output tsv)"
+  [[ -z "$writes" || "$writes" == false ]] || { echo 'Response writes must remain disabled during code publication.' >&2; exit 1; }
+fi
+az webapp deploy --resource-group "$target_group" --name "$target_app" \
   --src-path "${work}/hunting.zip" --type zip --clean false --restart true \
   --async false --track-status false --timeout 600000 --output none
-kind="$(cat "${work}/kind.txt")"
 python3 - <<'PY'
 import datetime, json, os, pathlib
 root = pathlib.Path(os.environ["HUNT_PUBLICATION_ROOT"])

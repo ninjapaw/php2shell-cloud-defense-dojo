@@ -369,6 +369,16 @@ test("actual embedded publisher permits closed response maintenance after expiry
   assert.equal(accepted.status, 0, accepted.stderr);
   assert.equal(JSON.parse(accepted.stdout).kind, "response-maintenance");
   assert.equal(existsSync(join(accepted.output, "hunting.zip")), true);
+  const publicBuild = join(directory, "public");
+  responseArtifact(publicBuild, "public-walkthrough-maintenance");
+  const publicSource = JSON.parse(gunzipSync(readFileSync(join(publicBuild, "response.json.gz"))));
+  const publicAccepted = validate(publicSource);
+  assert.equal(publicAccepted.status, 0, publicAccepted.stderr);
+  const listing = spawnSync(process.platform === "win32" ? "python" : "python3",
+    ["-c", "import json,sys,zipfile;print(json.dumps(zipfile.ZipFile(sys.argv[1]).namelist()))", join(publicAccepted.output, "hunting.zip")],
+    { encoding: "utf8", timeout: 10000 });
+  assert.equal(listing.status, 0);
+  assert.deepEqual(JSON.parse(listing.stdout), ["walkthrough.php"]);
   const rejected = validate({ ...response, files: { ...response.files, "operator/auth.mjs": "not allowed" } });
   assert.notEqual(rejected.status, 0);
   assert.match(rejected.stderr, /file allowlist rejected/);

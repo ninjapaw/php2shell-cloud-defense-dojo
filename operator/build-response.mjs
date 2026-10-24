@@ -9,7 +9,8 @@ export const RESPONSE_FILES = Object.freeze([
   "scripts/lib/response.mjs", "scripts/response.mjs", "operator/response.mjs",
   "operator/config.mjs", "operator/control.mjs", "operator/server.mjs", "operator/public-scripts/response.mjs",
 ]);
-export function responseArtifact(output) {
+export function responseArtifact(output, kind = "response-maintenance") {
+  if (!["response-maintenance", "public-walkthrough-maintenance"].includes(kind)) throw new Error("Unknown fixed response publication kind.");
   const root = fileURLToPath(new URL("../", import.meta.url));
   const license = readFileSync(join(root, "vendor", "pawprint", "LICENSE"), "utf8");
   const bundled = buildSync({
@@ -27,19 +28,20 @@ responseCli(process.argv.slice(2)).then(result => {
     define: { "import.meta.url": JSON.stringify("php2proof:response-bundle") },
     banner: { js: `/* Includes Pawprint validation helpers.\n${license.replaceAll("*/", "* /")}\n*/` },
   }).outputFiles[0].text;
-  const files = Object.fromEntries(RESPONSE_FILES.toSorted().map((name) => {
+  const paths = kind === "response-maintenance" ? RESPONSE_FILES : ["app/walkthrough.php"];
+  const files = Object.fromEntries(paths.toSorted().map((name) => {
     if (name === "operator/public-scripts/response.mjs") return [name, bundled];
     const path = join(root, ...name.split("/"));
     if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) throw new Error("Only exact regular response source files can be published.");
     const source = readFileSync(path, "utf8");
-    return [name, transformSync(source, { format: "esm", target: "node24", minify: true, legalComments: "inline" }).code];
+    return [name, name.endsWith(".mjs") ? transformSync(source, { format: "esm", target: "node24", minify: true, legalComments: "inline" }).code : source];
   }));
-  const bytes = gzipSync(JSON.stringify({ schemaVersion: 1, kind: "response-maintenance", files }), { level: 9, memLevel: 9 });
+  const bytes = gzipSync(JSON.stringify({ schemaVersion: 1, kind, files }), { level: 9, memLevel: 9 });
   const encoded = bytes.toString("base64");
   if (encoded.length + 2 > 61440) throw new Error("Response overlay exceeds the unchanged protected-source limit; no truncated artifact is emitted.");
   mkdirSync(output);
   writeFileSync(join(output, "response.json.gz"), bytes);
-  writeFileSync(join(output, "php2proof-response.mjs"), bundled);
+  if (kind === "response-maintenance") writeFileSync(join(output, "php2proof-response.mjs"), bundled);
   const stages = [];
   for (let i = 0; i < Math.ceil(encoded.length / 4000); i += 1) {
     const text = encoded.slice(i * 4000, (i + 1) * 4000);
@@ -47,12 +49,12 @@ responseCli(process.argv.slice(2)).then(result => {
     writeFileSync(path, text);
     stages.push({ index: i, path, length: text.length });
   }
-  const manifest = { schemaVersion: 1, kind: "response-maintenance", sha256: createHash("sha256").update(bytes).digest("hex"),
-    files: RESPONSE_FILES, encodedBytes: encoded.length, combinedProtectedBytes: encoded.length + 2, stages };
+  const manifest = { schemaVersion: 1, kind, sha256: createHash("sha256").update(bytes).digest("hex"),
+    files: paths, encodedBytes: encoded.length, combinedProtectedBytes: encoded.length + 2, stages };
   writeFileSync(join(output, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  if (process.argv.length !== 3) throw new Error("Usage: node operator\\build-response.mjs <new-output-directory>");
-  console.log(JSON.stringify(responseArtifact(resolve(process.argv[2]))));
+  if (process.argv.length < 3 || process.argv.length > 4) throw new Error("Usage: node operator\\build-response.mjs <new-output-directory> [response-maintenance|public-walkthrough-maintenance]");
+  console.log(JSON.stringify(responseArtifact(resolve(process.argv[2]), process.argv[3])));
 }

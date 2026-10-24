@@ -27,6 +27,7 @@ resource job 'Microsoft.ContainerInstance/containerGroups@2025-09-01' = {
           { name: 'AZURE_SUBSCRIPTION_ID', value: subscription().subscriptionId }
           { name: 'PUBLISHER_CLIENT_ID', value: clientId }
           { name: 'OPERATOR_GROUP', value: loadJsonContent('../config/operator.dev.json').resourceGroup }
+          { name: 'MAIN_GROUP', value: loadJsonContent('../config/dev.json').resourceGroup }
           { name: 'DOJO_SUFFIX', value: suffix }
           { name: 'ORIGINAL_EXPIRY', value: originalExpiry }
           { name: 'SOURCE_SHA256', value: sourceSha256 }

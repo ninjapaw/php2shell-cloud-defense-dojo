@@ -21,7 +21,9 @@ All observed Defender plans were Standard; no disabled-Defender experiment occur
 
 The original deadline is **2026-10-24T18:45:04.967Z**. The authorization question
 for a new live response window could not be answered, so it was not renewed.
-No new prevention, patch, mitigation/IAM change or after-state capture is claimed.
+No live prevention, patch, permanent mitigation write grant or after-state capture
+is claimed. Subsequent autonomous-completion authorization was used only for
+code publication through an invocation-scoped temporary publisher, not execution.
 Installing source does not authorize execution. Do not edit timestamps or weaken
 expiry checks to make an old demo run. Expiry does not automatically delete
 resources or stop billing.
@@ -235,4 +237,21 @@ The existing bounded operator publisher accepts only the exact seven paths for
 the `response-maintenance` kind. Its original full-release expiry rejection is
 unchanged; code maintenance does not authorize new jobs or make an expired
 login succeed. Publication still needs an independently authorized publisher;
-no new live publishing/IAM grant was assumed when the owner was unavailable.
+the initial unanswered question did not authorize runtime writes or renewal.
+The subsequently published code is available in the
+[public response guide](https://php2proof.ninjapaws.org/evidence/response) and its
+[readable script download](https://php2proof.ninjapaws.org/evidence/response/script).
+The original execution window remains closed. Real post-mitigation evidence is
+not inferred from successful code deployment.
+
+Code publication can additionally use `public-walkthrough-maintenance`, containing
+only the reviewed PHP walkthrough and writing only `walkthrough.php` with
+`clean=false`. Temporary Website Contributor is scoped to the exact public app,
+not the main resource group. No protection, runtime, domain or expiry setting is
+changed by that publication.
+
+Publication uses protected ARM parameters, never storage keys, SAS or copied
+tokens. Before installing operator code, the publisher requires credential
+initialization, one-time hunting capture and response writes to remain disabled.
+All temporary source data, identities and grants must be removed after actual
+worker completion; do not weaken private-network policy to move source files.
