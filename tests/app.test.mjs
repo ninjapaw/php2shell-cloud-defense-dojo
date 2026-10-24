@@ -142,6 +142,31 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.doesNotMatch(html, /href="[^"]*[?&]signal=|<script\b|<form\b|<iframe\b/i);
     assert.ok(!app.logs().includes("DOJO_EVENT "), "Viewing attack examples must not generate any signals.");
   });
+  await t.test("ten story cards use native ordered navigation, progress and a complete read-all fallback", async () => {
+    const html = await (await fetch(`${app.base}/walkthrough.php`)).text();
+    const steps = ["briefing", "move-request", "move-php-error", "move-process-synthetic",
+      "move-outbound-synthetic", "move-canary", "recorded", "protect", "remediate", "debrief"];
+    assert.deepEqual([...html.matchAll(/<section id="([^"]+)" class="walkthrough-chapter"/g)].map(([, id]) => id), steps);
+    const controls = [...html.matchAll(/<nav class="walkthrough-controls"[^>]*>([\s\S]*?)<\/nav>/g)];
+    assert.equal(controls.length, steps.length);
+    for (const [index, [, navigation]] of controls.entries()) {
+      const previous = navigation.match(/href="#([^"]+)" rel="prev"/);
+      const next = navigation.match(/href="#([^"]+)" rel="next"/);
+      assert.equal(previous?.[1], steps[index - 1]);
+      assert.equal(next?.[1], steps[index + 1]);
+      assert.ok(html.includes(`value="${index + 1}" max="10" aria-label="Story progress"`));
+    }
+    assert.match(controls[0][1], /aria-disabled="true">Previous step/);
+    assert.match(controls.at(-1)[1], /href="#briefing">Restart story/);
+    assert.match(html, /<summary>Jump to a step<\/summary>/);
+    assert.match(html, /href="#all-steps">Read all steps<\/a>/);
+    assert.match(html, /id="all-steps" tabindex="-1"/);
+    assert.match(html, /<summary>Actual ingested log from the recorded run<\/summary>/);
+    assert.equal((html.match(/<h3>What the analyst can see<\/h3>/g) ?? []).length, 5);
+    assert.equal((html.match(/No provider alerts in this run\./g) ?? []).length, 5);
+    assert.doesNotMatch(html, /<details open|<script\b|<form\b/i);
+    assert.ok(!app.logs().includes("DOJO_EVENT "));
+  });
   await t.test("each attack move shows the reviewed actual capture without inventing Defender alerts", async () => {
     const recorded = JSON.parse(readFileSync(join(ROOT, "operator", "public-evidence",
       "92ad189c-9a88-4403-b773-52453963e4b8.json"), "utf8"));

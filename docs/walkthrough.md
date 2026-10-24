@@ -9,8 +9,21 @@ training/fixed app state; the clearly dated recording is historical, not a live
 plan or alert badge. All operator commands below require your separately
 authorized terminal or the isolated [operator console](../operator/README.md).
 
-The structure follows Pawton's briefing -> chapters -> with/without comparison
--> debrief pattern. The evidence contract is different: this public PHP lab
+The layout follows Pawton's focused story-card pattern: briefing, five Ghostpaw
+moves, investigation, prevention, resolution and debrief. Use **Next step** and
+**Previous step**, or open **Jump to a step**. Each card shows its position and
+progress. Evidence, queries, alert expectations and advanced material are kept
+in expandable details instead of a long wall of text.
+
+Navigation uses native fragment links and CSS, not JavaScript. Steps can be
+bookmarked; browser Back/Forward works, and **Read all steps** shows the complete
+story. Printing includes all ten cards; expand any details you want to print.
+Browsers without CSS `:has()` show all cards with ordinary jump links. Existing
+chapter and attack-move links still reach their content, including references
+inside expanders. The page keeps its no-script Content Security Policy and
+never adds a browser simulation control.
+
+The evidence contract is different: this public PHP lab
 does **not** exercise a vulnerability or promise real workload-detector alerts.
 Do not turn a simulated process, connection, or canary event into an attack claim.
 
@@ -59,10 +72,9 @@ Before presenting:
 1. Read [the README](../README.md), [operations](operations.md), and
    [the safety disclaimer](../DISCLAIMER.md). Use only an isolated, authorized
    training subscription with approved costs.
-2. Use the documented Node/PHP and Linux/macOS or WSL2 cloud toolchain.
-   Native Windows supports offline planning and local tests, not the Azure
-   lifecycle adapter. Sign in and explicitly select the correct subscription
-   as described in the README.
+2. Follow the [deployment guide](deployment.md) for the checked Node/Azure CLI
+   toolchain and Bash/PowerShell wizard on Windows, macOS or Linux. Sign in and
+   explicitly select the correct subscription.
 3. Set `AZURE_SUBSCRIPTION_ID` and `DOJO_SUFFIX` to the actual run. Keep the
    original JSON `resourceGroup`, region, subscription, and suffix for an
    existing lab. Changing a suffix alone does not select a new group.
