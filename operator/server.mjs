@@ -70,7 +70,7 @@ export function createOperatorServer(config, { store, auth, control, log = conso
         response.end(css);
         return;
       }
-      if (request.method === "GET" && /^\/evidence\/[0-9a-f-]{36}$/.test(url.pathname)) {
+      if (request.method === "GET" && (url.pathname === "/evidence/hunting" || /^\/evidence\/[0-9a-f-]{36}$/.test(url.pathname))) {
         const name = url.pathname.slice("/evidence/".length);
         let snapshot;
         try { snapshot = await readFile(new URL(`./public-evidence/${name}.json`, import.meta.url), "utf8"); }
@@ -78,7 +78,10 @@ export function createOperatorServer(config, { store, auth, control, log = conso
           if (error.code === "ENOENT") throw new OperatorError(404, "not-published", "No manually reviewed snapshot is published at this address.");
           throw error;
         }
-        send(200, "Recorded GhostPaw evidence", `<p>Static, manually reviewed and redacted evidence. No live query or privileged action is exposed.</p><pre>${escape(snapshot)}</pre>`);
+        if (name === "hunting") {
+          send(200, "PHP2Shell hunting: queries, results and additional value",
+            (await import("./hunts.mjs")).publicHuntingPage(JSON.parse(snapshot)));
+        } else send(200, "Recorded GhostPaw evidence", `<p>Static, manually reviewed and redacted evidence. No live query or privileged action is exposed. <a href="/evidence/hunting">Additional hunting queries and value walkthroughs</a>.</p><pre>${escape(snapshot)}</pre>`);
         return;
       }
       const nonce = token();
@@ -121,8 +124,8 @@ export function createOperatorServer(config, { store, auth, control, log = conso
           return;
         }
         if (url.pathname === "/jobs") {
-          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
-          const job = await control.start(session, input.operation, input.idempotencyKey, input.sourceJobId);
+          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId", "huntId"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
+          const job = await control.start(session, input.operation, input.idempotencyKey, input.sourceJobId, input.huntId);
           response.writeHead(303, { ...headers, Location: `/jobs/${job.id}` });
           response.end();
           return;
@@ -131,9 +134,13 @@ export function createOperatorServer(config, { store, auth, control, log = conso
       }
       if (request.method !== "GET") throw new OperatorError(405, "method", "Only authenticated fixed HTML actions are supported.");
       const session = await auth.session(cookie(request));
+      if (url.pathname === "/hunts") {
+        send(200, "PHP2Shell hunting scenarios", await (await import("./hunts.mjs")).huntingPage(config, store, session));
+        return;
+      }
       if (url.pathname === "/") {
         const jobs = await store.recentJobs();
-        send(200, "GhostPaw test console", `<p>Exact lab: ${escape(config.names.group)}. Original expiry: ${escape(config.expiry)}. Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled
+        send(200, "GhostPaw test console", `<p><a href="/hunts">Hunting pack: scenarios, queries, actual results and additional value</a></p><p>Exact lab: ${escape(config.names.group)}. Original expiry: ${escape(config.expiry)}. Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled
           ? `<form action="/jobs" method="post">${hidden("csrf", session.csrf)}${hidden("operation", item.id)}${hidden("idempotencyKey", newRequestId())}<button>${escape(item.title)}</button></form>`
           : `<p><strong>${escape(item.title)}</strong>: disabled. ${escape(item.reason)}</p>`).join("")}<h2>Private run history</h2><ul>${jobs.map((job) => `<li><a href="/jobs/${escape(job.id)}">${escape(job.queuedAt)} / ${escape(job.operation)} / ${escape(job.status)}</a></li>`).join("")}</ul><form action="/logout" method="post">${hidden("csrf", session.csrf)}<button>Sign out</button></form>`);
         return;
@@ -184,6 +191,11 @@ export async function main() {
   }, 2000);
   worker.unref();
   server.listen(config.port, "0.0.0.0", () => console.log("PHP to Proof operator listening; authenticated durable controls are required."));
+  if (process.env.OPERATOR_HUNT_CAPTURE_ID) {
+    const { initializeHuntCapture } = await import("./hunts.mjs");
+    initializeHuntCapture(config, store, (guard) => new ReadOnlyAzure(config, credential, { guard }),
+      process.env.OPERATOR_HUNT_CAPTURE_ID).catch((error) => console.error(`ERROR: bounded hunting capture failed: ${redact(error.message)}`));
+  }
   if (process.env.OPERATOR_INITIALIZE === "true") {
     const { initialize } = await import("./initialize.mjs");
     initialize(config, { store, auth, control, vault }, process.env.OPERATOR_INITIALIZE_ID).catch((error) => {

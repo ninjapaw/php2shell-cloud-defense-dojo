@@ -72,6 +72,8 @@ Recorded deployment:
 - [Administrator sign-in](https://p2p-proof1023c-operator-dacubycsdbh4etck.b01.azurefd.net/login)
 - [Walkthrough and actual per-move logs](https://php2proof.ninjapaws.org/walkthrough.php#recorded)
 - [Reviewed GhostPaw recording](https://php2proof.ninjapaws.org/evidence/92ad189c-9a88-4403-b773-52453963e4b8)
+- [Administrator hunting scenarios and exact queries](https://p2p-proof1023c-operator-dacubycsdbh4etck.b01.azurefd.net/hunts)
+- [Additional-value hunting case study](https://php2proof.ninjapaws.org/evidence/hunting)
 
 This recording has five HTTP 200s, five ingested synthetic events, an actual
 Detection-mode WAF match, four Healthy posture assessments and no returned

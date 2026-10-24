@@ -21,6 +21,9 @@ test("HTTP boundary requires the edge, login, exact Origin and CSRF; no anonymou
   });
   assert.equal((await fetch(`${base}/`)).status, 403);
   assert.equal((await fetch(`${base}/`, { headers: edge })).status, 401);
+  const publicHunts = await fetch(`${base}/evidence/hunting`, { headers: edge });
+  assert.equal(publicHunts.status, 200);
+  assert.match(await publicHunts.text(), /HISTORICAL REVIEWED CAPTURE/);
   const stylesheet = await fetch(`${base}/style.css`, { headers: edge });
   assert.equal(stylesheet.status, 200);
   assert.match(stylesheet.headers.get("content-type"), /^text\/css/);
@@ -47,7 +50,15 @@ test("HTTP boundary requires the edge, login, exact Origin and CSRF; no anonymou
   assert.equal(home.status, 200);
   assert.match(dashboard, /GhostPaw test console/);
   assert.match(dashboard, /Not authorized/);
+  const hunts = await fetch(`${base}/hunts`, { headers: { ...edge, Cookie: sessionCookie } });
+  const huntsHtml = await hunts.text();
+  assert.equal(hunts.status, 200);
+  assert.equal((huntsHtml.match(/id="hunt-/g) ?? []).length, 27);
+  assert.match(huntsHtml, /20 value\/evaluation walkthroughs/);
+  assert.match(huntsHtml, /name="huntId" value="all"/);
   const csrf = /name="csrf" value="([^"]+)"/.exec(dashboard)[1];
+  assert.equal((await post("/jobs", { csrf, operation: "hunt-pack", huntId: "lab-waf",
+    idempotencyKey: "00000000-0000-4000-8000-000000000002", query: "arbitrary query" }, sessionCookie)).status, 400);
   assert.equal((await post("/jobs", { csrf: "wrong", operation: "simulate" }, sessionCookie)).status, 403);
   assert.equal((await post("/jobs", { csrf, operation: "simulate", idempotencyKey: "00000000-0000-4000-8000-000000000001", target: "https://other.invalid" }, sessionCookie)).status, 400);
   assert.equal((await post("/jobs", { csrf, operation: "remediate", idempotencyKey: "00000000-0000-4000-8000-000000000001" }, sessionCookie)).status, 400);

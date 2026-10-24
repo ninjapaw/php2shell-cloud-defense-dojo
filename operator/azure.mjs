@@ -110,6 +110,15 @@ export class ReadOnlyAzure {
     return table.rows.map((row) => Object.fromEntries(table.columns.map((column, index) => [column.name, row[index]])));
   }
 
+  async tables() {
+    const result = await this.request(`https://api.loganalytics.azure.com/v1/workspaces/${this.config.workspaceId}/metadata`,
+      "https://api.loganalytics.io/.default");
+    if (!Array.isArray(result.tables) || result.tables.some((table) => typeof table.name !== "string")) {
+      throw new Error("Log Analytics returned invalid source-readiness metadata.");
+    }
+    return result.tables.map((table) => table.name);
+  }
+
   async pricing(name) {
     if (!["CloudPosture", "AppServices", "Containers"].includes(name)) throw new Error("Unsupported read-only pricing observation.");
     const path = `/subscriptions/${this.config.invocation.subscription}/providers/Microsoft.Security/pricings/${name}`;

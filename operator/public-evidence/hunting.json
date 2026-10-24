@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 2,
+  "kind": "reviewed-hunting",
+  "reviewed": true,
+  "runId": "5c4df084-1156-4807-a989-701317fe68c8",
+  "source": {
+    "repository": "https://github.com/cseelhoff-ms/php2shell-hunting-pack",
+    "revision": "41815ef397da1fb048925815ce7c77bfe4eca5e5",
+    "reviewedAt": "2026-10-24",
+    "relationship": "Independently authored coverage; upstream queries, scripts and NCSC data are not vendored.",
+    "advisories": [
+      "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w",
+      "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"
+    ]
+  },
+  "startedAt": "2026-10-24T18:35:01.215Z",
+  "finishedAt": "2026-10-24T18:35:03.883Z",
+  "timespan": "2026-10-23T18:35:01.215Z/2026-10-24T18:35:01.215Z",
+  "plans": {
+    "AppServices": {
+      "status": "queried",
+      "tier": "Standard"
+    },
+    "CloudPosture": {
+      "status": "queried",
+      "tier": "Standard"
+    },
+    "Containers": {
+      "status": "queried",
+      "tier": "Standard"
+    }
+  },
+  "comparison": "Independent source logs versus actual observations under existing enabled plans; not a Defender-disabled experiment.",
+  "boundary": "Read-only, exact lab, retrospective 24-hour queries. No scan, exploit, image execution, DCR/rule deployment, protection change or tenant-wide XDR query. Original operator login/test deadline:2026-10-24T18:45:04.967Z. This public recording remains historical and read-only; no execution window was extended.",
+  "publication": "Manually reviewed and field-redacted historical hunting capture; no live public query or privileged action.",
+  "results": [
+    {
+      "id": "lab-waf",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "207d566fc3a218dd68db611684c7bc4222fee31886268297ed496a9b84094b36"
+    },
+    {
+      "id": "lab-php-errors",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "72375d860f92ab629466f75ae40ee053d854c2581cd7b8446fd54b3f5e833872"
+    },
+    {
+      "id": "lab-child-process",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "9969d6f9aba9c93ec0dad63e89f9bfa29eca13cd9abad606cd3a1f99f45d51bf"
+    },
+    {
+      "id": "lab-outbound",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "5f03049dfdfb019bffce4af45a4c1182a0533ed0849b08db9c61570d3a1de987"
+    },
+    {
+      "id": "lab-canary",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "bd434928e3c70f63fa4d6d9c3277d5806367390568a74b2860bf94fb546bf5f2"
+    },
+    {
+      "id": "lab-correlation",
+      "platform": "lab-workspace",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [],
+      "rows": null,
+      "queryTemplateSha256": "a003b61b37262b40c6d9eb142e35ea7600a3b7a83528f310f7510eaa58f737bb"
+    },
+    {
+      "id": "tvm-exposure",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareVulnerabilities"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "484987d63987667ce886c9da609944211f0dc917a832c852068ccb60117f2409"
+    },
+    {
+      "id": "php-inventory",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareInventory"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "15216f6dc1258c6f6a8fa2eb3c98da322ce8d037a40fbfa0d4dcf9a22c3ca2e0"
+    },
+    {
+      "id": "software-discovery",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareInventory",
+        "DeviceProcessEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "ac1c9fe1fe793638f98004b919e2b86cc51672f717683be224fc1951aa287807"
+    },
+    {
+      "id": "php-binary-evidence",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareEvidenceBeta",
+        "DeviceInfo"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "4d75f53d3b01953276ee6b4b81a59641f4c5075bed342a5d5ca0556d6d51af40"
+    },
+    {
+      "id": "bundled-products",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareInventory"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "9539de8c8008491acd119ef3ebb95af642efb4610c769abbba4c571e0133bca2"
+    },
+    {
+      "id": "worker-classification",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceTvmSoftwareInventory",
+        "DeviceProcessEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "4b681cd56419ea9c114262b6b0a76295c32a827800360473f9cce2b6f617382b"
+    },
+    {
+      "id": "worker-discovery",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceProcessEvents",
+        "DeviceNetworkEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "e72d9e2262c0fa0937f16cf125b905fa8226b93363f8b6b60e2f96f19f1b41ea"
+    },
+    {
+      "id": "worker-baseline",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceProcessEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "c48f71d4a0e9184cec0999120a51fee74e32bec728609e8f2604cc70f1527ea0"
+    },
+    {
+      "id": "worker-child-processes",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceProcessEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "daa822601cf17c62127d6e0d0bff6c78f458884f8afba479615bbe5bdade2890"
+    },
+    {
+      "id": "php-file-drops",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceFileEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "62ca0964c79b5d521b49809dba70252254844f171efd28f6591bdf0492f3b876"
+    },
+    {
+      "id": "worker-network",
+      "platform": "defender-xdr",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": null,
+      "reason": "No XDR hunting connector/tenant-wide consent is configured. App Service does not supply MDE device telemetry.",
+      "missingTables": [
+        "DeviceNetworkEvents"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "32a08d4944c560f039aed488c3ed1698cf519a9ae8b1c6f936eb89a3a6adaa92"
+    },
+    {
+      "id": "php-assessments",
+      "platform": "resource-graph",
+      "status": "queried",
+      "collectedAt": "2026-10-24T18:35:02.072Z",
+      "rowCount": 4,
+      "rows": [
+        {
+          "Status": "Healthy",
+          "EvidenceKind": "assessment-text-match-review-required"
+        },
+        {
+          "Status": "Healthy",
+          "EvidenceKind": "assessment-text-match-review-required"
+        },
+        {
+          "Status": "Healthy",
+          "EvidenceKind": "assessment-text-match-review-required"
+        },
+        {
+          "Status": "Healthy",
+          "EvidenceKind": "assessment-text-match-review-required"
+        }
+      ],
+      "queryTemplateSha256": "f88a8d5b52084c94ebc858e396d24f27ab7e74a3dcaea7d3b0a2cf9232de9fb9"
+    },
+    {
+      "id": "appservice-runtimes",
+      "platform": "resource-graph",
+      "status": "queried",
+      "collectedAt": "2026-10-24T18:35:02.475Z",
+      "rowCount": 1,
+      "rows": [
+        {
+          "Runtime": "PHP|8.4",
+          "CandidateKind": "php-platform-stack",
+          "ReviewStatus": "verify-effective-runtime-and-patch-level",
+          "EvidenceKind": "runtime-configuration-lead-not-patch-proof"
+        }
+      ],
+      "queryTemplateSha256": "e4b193eb85a7b811cd00b0bccc1c265cc582968a48e95ad3b83de875ac12feb5"
+    },
+    {
+      "id": "appservice-runtime-discovery",
+      "platform": "resource-graph",
+      "status": "queried",
+      "collectedAt": "2026-10-24T18:35:02.944Z",
+      "rowCount": 1,
+      "rows": [
+        {
+          "Runtime": "PHP|8.4",
+          "Apps": 1,
+          "EvidenceKind": "runtime-discovery-review-required"
+        }
+      ],
+      "queryTemplateSha256": "1bd74a23eec6081e2a88617e9ac303a7051e9cb3447ab28821296350fca5aa49"
+    },
+    {
+      "id": "container-cve-findings",
+      "platform": "resource-graph",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "securityresources"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "01b852531f4792fd91da39f01d22cc3606bbea194b00ea57afe9e97fa675673a"
+    },
+    {
+      "id": "container-php-findings",
+      "platform": "resource-graph",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "securityresources"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "9997615f28960f8486f41489eff42428a20891c09b61a6f1a7fa4eaa083204f3"
+    },
+    {
+      "id": "syslog-worker-failures",
+      "platform": "sentinel-log-analytics",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "Syslog"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "661f8bd52f6e03741e8ef625d75b51b543b36855a08a9a1ee976e8af6aebe5de"
+    },
+    {
+      "id": "appservice-http",
+      "platform": "sentinel-log-analytics",
+      "status": "unavailable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "Azure evidence exceeds the 1 MiB response bound.",
+      "missingTables": [
+        "AppServiceHTTPLogs"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "6a79eabab5747bcce49875d1f86e42e3d9276b5e026a9fece5bb8f29a737b326"
+    },
+    {
+      "id": "appgateway-waf",
+      "platform": "sentinel-log-analytics",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "AGWAccessLogs",
+        "AGWFirewallLogs"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "c65602666540bb47bfae878d53ff08df9af6d52c5c8572fea7f0b87f0ef5d057"
+    },
+    {
+      "id": "container-worker-errors",
+      "platform": "sentinel-log-analytics",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "ContainerLogV2"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "76f5d8b8c9317185b755edaf9c1707dfa71812de6e494042b84e572773d8d224"
+    },
+    {
+      "id": "web-text-logs",
+      "platform": "sentinel-log-analytics",
+      "status": "not-applicable",
+      "collectedAt": "2026-10-24T18:35:03.365Z",
+      "rowCount": null,
+      "reason": "This hunt requires a separately authorized VM, registry/container, Application Gateway or custom-log scope; none is selected by this App Service console.",
+      "missingTables": [
+        "WebErrorLog_CL",
+        "WebAccessLog_CL"
+      ],
+      "rows": null,
+      "queryTemplateSha256": "f83b5fe602995145ee5579a900182e312e656dc404fe02d74cdf7aaa9356f37d"
+    }
+  ],
+  "reviewedAt": "2026-10-24T18:47:18.298Z"
+}

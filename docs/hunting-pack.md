@@ -1,13 +1,47 @@
 # PHP to Proof: PHP2Shell hunting coverage and evaluation
 
 This dojo incorporates the investigation coverage of
-[cseelhoff-ms/php2shell-hunting-pack](https://github.com/cseelhoff-ms/php2shell-hunting-pack/tree/15baae8d25e631ac2223f904f4d0a0f4cf08d703),
-reviewed on 2026-10-22 at commit
-`15baae8d25e631ac2223f904f4d0a0f4cf08d703`. The local queries are independently
+[cseelhoff-ms/php2shell-hunting-pack](https://github.com/cseelhoff-ms/php2shell-hunting-pack/tree/41815ef397da1fb048925815ce7c77bfe4eca5e5),
+reviewed on 2026-10-24 at commit
+`41815ef397da1fb048925815ce7c77bfe4eca5e5`. The local queries are independently
 authored; upstream code, scripts and product datasets are **not vendored**.
 The mapping covers all 10 asset-discovery rows, Hunts A-G including D1/D2,
 E1/E2 and F1/F2, all 16 upstream query files, their discovery/baseline variants,
 and manual evidence paths for the non-KQL methods.
+
+## Administrator hunting workflows
+
+The authenticated [hunting console](https://p2p-proof1023c-operator-dacubycsdbh4etck.b01.azurefd.net/hunts)
+now exposes all **27 independently authored queries** and **20 additional-value
+walkthroughs**. Each scenario shows the template, exact executed binding and UTC
+window, source requirements, actual results or an explicit unavailable/failure
+state, interpretation limits, and what supported Defender/Sentinel components add.
+
+Only ten adaptations are executable in the owned App Service lab: six lab-source
+hunts, three scoped Resource Graph hunts, and App Service HTTP analysis when its
+table is present. Queries use the original resource group/app/profile, a fixed
+24-hour retrospective window and at most 100 rows (Resource Graph: 50). The
+correlation hunt expands the scheduled rule's freshness gate for retrospective
+review; it does not enable or change the actual analytics rule.
+
+MDE/TVM queries are visible but no tenant-wide XDR connector/consent is configured
+in this console. Registry, VM, Application Gateway, AKS, custom-log, EASM, code
+search, SBOM and active network methods retain their separate authorization and
+telemetry requirements. No scanner, image execution, DCR/rule deployment, paid
+plan toggle or mitigation is hidden behind **Run hunt**.
+
+The optional [public hunting case study](https://php2proof.ninjapaws.org/evidence/hunting)
+serves only a separately reviewed static snapshot. Private identifiers, client
+addresses, raw messages, cookies and command-line secrets are not public fields.
+Null row counts mean **not executed**; an actual successful zero-row query is
+**not clearance**. Source logs versus enabled-plan observations are not an
+observed Defender-disabled experiment.
+
+The upstream changes since the previous pin only refresh NCSC product data.
+There is no repository-wide upstream license; its product data has separate
+attribution. No upstream code/data was copied. The reviewed upstream Hunt B has
+a trailing-parenthesis syntax defect; the independent local adaptation is
+compiled and tested separately rather than reproducing it.
 
 The [catalog](../detections/catalog.json) is the machine-readable query and
 evaluation contract. [Schema fixtures](../detections/schemas.json) are offline

@@ -15,6 +15,7 @@ export const CATALOGUE = Object.freeze([
   { id: "investigate", title: "Read actual matching posture assessments", enabled: true },
   { id: "domain-check", title: "Check the existing custom domain", enabled: true },
   { id: "collect-evidence", title: "Refresh evidence for a persisted run", enabled: true, contextRequired: true },
+  { id: "hunt-pack", title: "Reviewed read-only hunting pack", enabled: true, contextRequired: true },
   { id: "defender-validation", title: "Microsoft App Service validation marker", enabled: false,
     reason: "Deferred: registration eligibility and a four-hour observation window must be verified before this test can be authorized." },
   ...["protect", "remediate", "deploy", "repair", "uninstall", "domain", "container-test"].map((id) => ({

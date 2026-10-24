@@ -54,6 +54,20 @@ they do not produce empty successful dashboards.
 The full CLI hunting catalogue remains in [the hunting guide](../docs/hunting-pack.md).
 There is no arbitrary command, query or target input.
 
+### Hunting scenarios, queries and additional value
+
+Open `/hunts` after sign-in. All 27 reviewed query scenarios and 20 discovery,
+detection and closure walkthroughs are included. Run an individually allowlisted
+lab hunt or evaluate the whole catalogue. The actual bound query, UTC window,
+result rows and source gaps are saved privately. Unsupported XDR/estate methods
+show their requirements, never invented rows or a successful empty hunt.
+
+The deployment-only `OPERATOR_HUNT_CAPTURE_ID` UUID can authorize one audited,
+lease/deadline/expiry-bounded read-only capture without reading the administrator
+password. Its durable claim prevents automatic replay. It is not an HTTP route
+or public execution bypass. Disable the setting after collecting the candidate;
+manual review and a separate static publication are still mandatory.
+
 `protect`, `remediate`, deployment/repair, DNS writes, teardown, container execution
 and security-plan changes are visibly unavailable. The console must not disable
 Defender, reopen a fixed lab, weaken WAF or turn an intentionally harmless public
@@ -145,6 +159,37 @@ The build uses a pinned, build-only minifier and a production-only locked manife
 The resulting runtime is independently SHA-256 verified and tested. Its allowlist,
 sixteen-chunk maximum and combined 60-KiB protected-input bound are not expanded.
 No `.env`, tests, credentials, arbitrary files or private container lab are shipped.
+
+Hunting assets are a separate bounded overlay so the original 60-KiB protected
+input limit is not widened:
+
+```powershell
+node operator\build-hunts.mjs C:\path\to\new-hunting-release release
+node operator\build-hunts.mjs C:\path\to\new-reviewed-recording recording
+```
+
+Deploy the **release overlay after every full core runtime deployment**; the
+core archive deliberately does not duplicate the query/data assets. The overlay
+has a closed file allowlist, SHA-256 check and `clean=false`, preserving existing
+SDK dependencies and recordings. Missing hunting assets fail explicitly, without
+an empty-success fallback. The recording mode accepts only the reviewed fixed
+`operator/public-evidence/hunting.json` snapshot. Neither build publishes itself.
+
+`module` mode is restricted to the fixed `operator/hunts.mjs` maintenance file.
+After the original expiry, only that code-maintenance overlay and reviewed static
+recordings may be published; full releases still stop. This does not renew
+credentials, permit a login/job, or authorize another capture. Runtime expiry
+guards remain intact and the out-of-band capture setting is cleared.
+
+The recorded capture ran at **18:35:01–18:35:03 UTC on 2026-10-24**, before the
+original deadline. It contains three successful Resource Graph queries (four
+Healthy assessments and one PHP runtime/inventory row in each inventory view),
+18 explicit unavailable scenarios and six outside the selected lab scope.
+Seven log-source hunts were not executed because metadata exceeded the existing
+1-MiB response bound. The maintenance fix keeps that bound: independently
+successful source queries may still provide positive evidence, while zero rows
+with unknown source readiness remain a distinct gap. No rerun or result is
+invented after expiry; a fresh authorized execution window is required.
 
 Infrastructure entry: [operator.bicep](../infra/operator.bicep). Compiled modules
 can be deployed individually through the authenticated ARM integration. AVM was

@@ -23,12 +23,14 @@ export class ControlPlane {
     }
   }
 
-  async start(session, operation, idempotencyKey, sourceJobId) {
+  async start(session, operation, idempotencyKey, sourceJobId, huntId) {
     await this.authorize(session);
     if (!OPERATIONS.includes(operation) || !JOB_ID.test(idempotencyKey)) {
       await this.store.audit("dispatch-denied", { session: session.hash, reason: "outside-catalogue" });
       throw new OperatorError(400, "not-allowed", "Only the fixed harmless/read-only catalogue is executable.");
     }
+    if (operation === "hunt-pack") (await import("./hunts.mjs")).assertHuntId(huntId);
+    else if (huntId !== undefined) throw new OperatorError(400, "unexpected-hunt", "Only the hunting catalogue accepts a hunt identifier.");
     return this.store.withLease("dispatch", async () => {
       if (operation === "collect-evidence") {
         if (!JOB_ID.test(sourceJobId)) throw new OperatorError(400, "source-run-required", "Select an existing actual simulator run.");
@@ -40,7 +42,8 @@ export class ControlPlane {
       }
       const existing = await this.store.read(`jobs/${idempotencyKey}`);
       if (existing) {
-        if (existing.value.sessionHash !== session.hash || existing.value.operation !== operation || existing.value.sourceJobId !== sourceJobId) {
+        if (existing.value.sessionHash !== session.hash || existing.value.operation !== operation || existing.value.sourceJobId !== sourceJobId
+            || existing.value.huntId !== huntId) {
           throw new OperatorError(409, "idempotency-conflict", "This request identifier already belongs to another action.");
         }
         return existing.value;
@@ -66,6 +69,7 @@ export class ControlPlane {
         queuedAt: new Date(timestamp).toISOString(), expiresAt: this.config.expiry,
         target: this.config.names.appId,
         ...(sourceJobId ? { sourceJobId } : {}),
+        ...(huntId ? { huntId } : {}),
       };
       await this.store.audit("dispatch-intent", { jobId: job.id, operation, session: session.hash });
       await this.store.write(`jobs/${job.id}`, job);
@@ -147,7 +151,16 @@ export class ControlPlane {
           return response;
         };
         let result;
-        if (job.operation === "collect-evidence") {
+        if (job.operation === "hunt-pack") {
+          assertOwnedGroup(await azure.az(["group", "show", "--name", this.config.names.group]), this.config.invocation);
+          result = await (await import("./hunts.mjs")).runHunts(this.config, azure, job.huntId,
+            { guard, log: this.log, now: this.now });
+          for (const item of result.results) {
+            const key = `evidence/hunting/${item.id}`;
+            const previous = await this.store.read(key);
+            await this.store.write(key, item, previous?.etag);
+          }
+        } else if (job.operation === "collect-evidence") {
           assertOwnedGroup(await azure.az(["group", "show", "--name", this.config.names.group]), this.config.invocation);
           const source = JOB_ID.test(job.sourceJobId) ? await this.store.read(`jobs/${job.sourceJobId}`) : undefined;
           if (!source || source.value.target !== this.config.names.appId || source.value.operation !== "simulate"
@@ -172,7 +185,8 @@ export class ControlPlane {
         }
         await guard();
         const latest = await this.store.read(`jobs/${job.id}`);
-        const completeEvidence = !evidence || Object.values(evidence.captures).every((source) => source.status === "queried");
+        const completeEvidence = (!evidence || Object.values(evidence.captures).every((source) => source.status === "queried"))
+          && (job.operation !== "hunt-pack" || result.results.every((item) => item.status === "queried"));
         const ingested = !evidence || (evidence.captures.application.status === "queried"
           && new Set(evidence.captures.application.rows.map((row) => row.Signal)).size === 5);
         const finished = {

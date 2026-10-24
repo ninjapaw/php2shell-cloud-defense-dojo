@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "source": {
     "repository": "https://github.com/cseelhoff-ms/php2shell-hunting-pack",
-    "revision": "15baae8d25e631ac2223f904f4d0a0f4cf08d703",
-    "reviewedAt": "2026-10-22",
+    "revision": "41815ef397da1fb048925815ce7c77bfe4eca5e5",
+    "reviewedAt": "2026-10-24",
     "relationship": "Independently authored coverage; upstream queries, scripts and NCSC data are not vendored.",
     "advisories": [
       "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w",
