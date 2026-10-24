@@ -69,7 +69,7 @@ $moves = [
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/">Story</a><a href="/walkthrough.php" aria-current="page">Walkthrough</a></nav><span class="badge">PUBLIC DEMO</span></header>
+  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/">Story</a><a href="/walkthrough.php" aria-current="page">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a></nav><span class="badge">PUBLIC DEMO</span></header>
   <main id="main" class="walkthrough">
     <aside class="warning"><strong>TRAINING ONLY.</strong> A fictional attack story, not an exploit runner. Real WAF behavior; synthetic PHP signals. No shell, real outbound connection, secret read, or compromise is produced.</aside>
     <section class="hero">

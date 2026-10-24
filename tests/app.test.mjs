@@ -10,6 +10,7 @@ import { ROOT } from "../scripts/dojo.mjs";
 import { SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../scripts/lib/config.mjs";
 
 const RUN_ID = "44444444-4444-4444-8444-444444444444";
+const GITHUB_LINK = '<a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a>';
 
 async function startPhp(state, environment = "dev") {
   const server = createServer();
@@ -65,6 +66,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.match(html, /SYNTHETIC SIGNALS AVAILABLE/);
     assert.match(html, /No assessment, runtime alert, or attack path is fabricated/);
     assert.match(html, /href="\/walkthrough\.php"/);
+    assert.ok(html.includes(GITHUB_LINK), "Story navigation must link to the exact project repository.");
     assert.match(page.headers.get("content-security-policy"), /default-src 'none'/);
     assert.equal(page.headers.get("cache-control"), "no-store");
     assert.equal((await fetch(`${app.base}/assets/style.css`)).status, 200);
@@ -84,6 +86,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.match(html, /TRAINING ONLY/);
     assert.doesNotMatch(html, /class="badge">DEV ONLY<\/span>/);
     assert.match(html, /Application state: training/);
+    assert.ok(html.includes(GITHUB_LINK), "Walkthrough navigation must link to the exact project repository.");
     assert.match(html, /Defender and Sentinel status: not queried by this page/);
     assert.match(html, /Foundational CSPM/);
     assert.match(html, /Serverless protection/);
@@ -196,6 +199,8 @@ test("real PHP fixed state removes every synthetic scenario surface", async (t) 
   const walkthrough = await (await fetch(`${app.base}/walkthrough.php`)).text();
   assert.match(walkthrough, /Application state: fixed/);
   assert.match(walkthrough, /Training endpoints have been removed/);
+  assert.ok(html.includes(GITHUB_LINK), "Fixed story must retain its GitHub link.");
+  assert.ok(walkthrough.includes(GITHUB_LINK), "Fixed walkthrough must retain its GitHub link.");
   const health = await (await fetch(`${app.base}/health.php`)).json();
   assert.equal(health.state, "fixed");
   assert.equal(health.syntheticEndpointsEnabled, false);

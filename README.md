@@ -34,6 +34,9 @@ on the same deployed host. The [complete operator walkthrough](docs/walkthrough.
 provides the terminal steps, before/after expectations, component comparison,
 presenter prompts, troubleshooting, and cleanup.
 
+The **GitHub** navigation link on both public pages opens the
+[project repository](https://github.com/ninjapaw/php2shell-cloud-defense-dojo).
+
 Like Pawton's guided story, each chapter compares what you can investigate
 without additional Defender components and what supported, enabled components
 can add. Unlike a live workload-detector demonstration, the PHP process,

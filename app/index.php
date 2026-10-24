@@ -68,7 +68,7 @@ $fixed = $state === 'fixed';
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/" aria-current="page">Story</a><a href="/walkthrough.php">Walkthrough</a></nav><span class="badge">PUBLIC DEMO</span></header>
+  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/" aria-current="page">Story</a><a href="/walkthrough.php">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a></nav><span class="badge">PUBLIC DEMO</span></header>
   <main id="main">
     <aside class="warning"><strong>TRAINING ONLY.</strong> Isolated, authorized subscriptions. Fabricated data. No exploit, shell, or real compromise is demonstrated.</aside>
     <section class="hero">
