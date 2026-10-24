@@ -11,6 +11,7 @@ import { SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../scripts/lib/config.mjs"
 
 const RUN_ID = "44444444-4444-4444-8444-444444444444";
 const GITHUB_LINK = '<a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a>';
+const RECORDED_LINK = 'href="/evidence/92ad189c-9a88-4403-b773-52453963e4b8"';
 
 async function startPhp(state, environment = "dev") {
   const server = createServer();
@@ -87,6 +88,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.doesNotMatch(html, /class="badge">DEV ONLY<\/span>/);
     assert.match(html, /Application state: training/);
     assert.ok(html.includes(GITHUB_LINK), "Walkthrough navigation must link to the exact project repository.");
+    assert.ok(html.includes(RECORDED_LINK), "Walkthrough must link to the reviewed actual run, not only illustrative examples.");
     assert.match(html, /Defender and Sentinel status: not queried by this page/);
     assert.match(html, /Foundational CSPM/);
     assert.match(html, /Serverless protection/);
@@ -113,7 +115,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
       assert.match((await rejected.json()).error, /accepts no training inputs/);
     }
   });
-  await t.test("attack story pairs all five moves with honest log excerpts and conditional alert references", async () => {
+  await t.test("attack story pairs all five moves with captured logs and conditional alert references", async () => {
     const html = await (await fetch(`${app.base}/walkthrough.php`)).text();
     assert.match(html, /The request that wanted a shell/);
     assert.match(html, /Ghostpaw is fictional/);
@@ -131,16 +133,41 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.match(html, /Severity: Informational/);
     assert.match(html, /Incident creation: disabled/);
     const signals = ["request", "php-error", "process-synthetic", "outbound-synthetic", "canary"];
-    const examples = [...html.matchAll(/<pre data-example-signal="([^"]+)"><code>([\s\S]*?)<\/code><\/pre>/g)];
-    assert.deepEqual(examples.map((match) => match[1]), signals);
-    for (const [, signal, encoded] of examples) {
-      assert.ok(html.includes(`id="move-${signal}"`), signal);
-      assert.deepEqual(JSON.parse(encoded.replaceAll("&quot;", '"')), {
-        synthetic: true, signal, runId: RUN_ID, evidenceKind: "synthetic-application-log",
-      });
-    }
+    for (const signal of signals) assert.ok(html.includes(`id="move-${signal}"`), signal);
+    assert.doesNotMatch(html, /data-example-signal=/);
     assert.doesNotMatch(html, /href="[^"]*[?&]signal=|<script\b|<form\b|<iframe\b/i);
     assert.ok(!app.logs().includes("DOJO_EVENT "), "Viewing attack examples must not generate any signals.");
+  });
+  await t.test("each attack move shows the reviewed actual capture without inventing Defender alerts", async () => {
+    const recorded = JSON.parse(readFileSync(join(ROOT, "operator", "public-evidence",
+      "92ad189c-9a88-4403-b773-52453963e4b8.json"), "utf8"));
+    const html = await (await fetch(`${app.base}/walkthrough.php`)).text();
+    for (const value of [recorded.runId, recorded.startedAt, recorded.endedAt, recorded.capturedAt]) {
+      assert.ok(html.includes(value), `Recorded provenance must match the reviewed snapshot: ${value}`);
+    }
+    assert.match(html, /HISTORICAL CAPTURE \/ NOT LIVE/);
+    assert.match(html, /Not a Defender-disabled control run/);
+    assert.match(html, /not enforced blocking/);
+    assert.match(html, /direct provider alert query succeeded and returned <code>\[\]<\/code>/);
+    assert.match(html, /not four detections/);
+    assert.match(html, /not necessarily exclusive to paid CSPM/);
+    assert.deepEqual(recorded.captures.defenderAlerts, { status: "queried", rows: [] });
+    assert.equal(recorded.captures.posture.rows.length, 4);
+    assert.ok(recorded.captures.posture.rows.every((row) => row.Status === "Healthy"));
+    for (const plan of ["AppServices", "CloudPosture", "Containers"]) {
+      assert.deepEqual(recorded.plans[plan], { status: "queried", tier: "Standard" });
+    }
+    const captures = [...html.matchAll(/<pre data-recorded-signal="([^"]+)"><code>([\s\S]*?)<\/code><\/pre>/g)];
+    assert.deepEqual(captures.map(([, signal]) => signal), recorded.requests.map((request) => request.signal));
+    assert.deepEqual(captures.map(([, , encoded]) => JSON.parse(encoded.replaceAll("&quot;", '"'))),
+      recorded.captures.application.rows);
+    assert.equal((html.match(/data-recorded-http="200"/g) ?? []).length, recorded.requests.length);
+    assert.ok(recorded.requests.every((request) => request.status === 200 && request.synthetic === true));
+    const waf = html.match(/<pre data-recorded-waf><code>([\s\S]*?)<\/code><\/pre>/);
+    assert.ok(waf, "The actual WAF source record must be visible beside the first move.");
+    assert.deepEqual(JSON.parse(waf[1].replaceAll("&quot;", '"')), recorded.captures.waf.rows[0]);
+    assert.ok(!app.logs().includes("DOJO_EVENT "), "Reading historical captures must not run any tests.");
+    assert.ok(Buffer.byteLength(html, "utf8") < 64 * 1024, "The expanded actual capture must preserve the HTTP bound.");
   });
   await t.test("all five signals return labelled fixtures and structured log events", async () => {
     for (const signal of ["request", "php-error", "process-synthetic", "outbound-synthetic", "canary"]) {
@@ -201,6 +228,7 @@ test("real PHP fixed state removes every synthetic scenario surface", async (t) 
   assert.match(walkthrough, /Training endpoints have been removed/);
   assert.ok(html.includes(GITHUB_LINK), "Fixed story must retain its GitHub link.");
   assert.ok(walkthrough.includes(GITHUB_LINK), "Fixed walkthrough must retain its GitHub link.");
+  assert.ok(walkthrough.includes(RECORDED_LINK), "Historical reviewed evidence remains available after remediation.");
   const health = await (await fetch(`${app.base}/health.php`)).json();
   assert.equal(health.state, "fixed");
   assert.equal(health.syntheticEndpointsEnabled, false);

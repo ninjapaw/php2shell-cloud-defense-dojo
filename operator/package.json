@@ -1,0 +1,28 @@
+{
+  "name": "php-to-proof-operator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test",
+    "build:runtime": "node build-runtime.mjs"
+  },
+  "dependencies": {
+    "@azure/identity": "4.14.0",
+    "@azure/keyvault-secrets": "4.11.2",
+    "@azure/storage-blob": "12.34.0",
+    "@azure/storage-queue": "12.32.0"
+  },
+  "overrides": {
+    "@azure/identity": {
+      "@azure/msal-node": "7.1.1"
+    }
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

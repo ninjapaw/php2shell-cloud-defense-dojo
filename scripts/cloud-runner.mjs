@@ -1,7 +1,7 @@
 import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { execute, ROOT } from "./dojo.mjs";
@@ -75,7 +75,12 @@ export function assertRunnerCleanupTargets(stack, expected) {
 }
 
 export function cloudContext(root = ROOT) {
-  const files = Object.fromEntries(CLOUD_CONTEXT_FILES.map((path) => {
+  const ordered = CLOUD_CONTEXT_FILES.toSorted((left, right) => {
+    const a = `${extname(left)}:${left}`;
+    const b = `${extname(right)}:${right}`;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  const files = Object.fromEntries(ordered.map((path) => {
     const absolute = join(root, path);
     if (!lstatSync(absolute).isFile()) throw new Error(`Cloud context must contain only regular allowlisted files: ${path}.`);
     const bytes = readFileSync(absolute);
@@ -83,9 +88,9 @@ export function cloudContext(root = ROOT) {
     if (!Buffer.from(text, "utf8").equals(bytes)) throw new Error(`Cloud context source is not lossless UTF-8: ${path}.`);
     return [path, text];
   }));
-  const content = gzipSync(JSON.stringify({ schemaVersion: 2, files }), { level: 9 });
+  const content = gzipSync(JSON.stringify({ schemaVersion: 2, files }), { level: 9, memLevel: 9 });
   const encoded = content.toString("base64");
-  if (encoded.length > 60 * 1024) throw new Error("Cloud source exceeds the protected-input budget; do not silently truncate it.");
+  if (encoded.length + 2 > 60 * 1024) throw new Error(`Cloud source exceeds the protected-input budget (${encoded.length + 2}/61440); source is not truncated.`);
   const chunks = Array.from({ length: Math.ceil(encoded.length / 8000) }, (_, index) => encoded.slice(index * 8000, (index + 1) * 8000));
   return { content, sha256: createHash("sha256").update(content).digest("hex"), sourceBundle: { chunks } };
 }

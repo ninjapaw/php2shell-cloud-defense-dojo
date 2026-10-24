@@ -82,29 +82,29 @@ export async function execute(config, dependencies = {}) {
   }
   const az = dependencies.az ?? createAzureClient(config);
   const sleep = dependencies.sleep ?? delay;
-  const get = (id, version) => assertResource(az(["resource", "show", "--ids", id, "--api-version", version]), id);
-  const account = az(["account", "show"]);
+  const get = async (id, version) => assertResource(await az(["resource", "show", "--ids", id, "--api-version", version]), id);
+  const account = await az(["account", "show"]);
   if (!sameId(account?.id, config.subscription) || account.state !== "Enabled") {
     throw new Error("Selected enabled Azure subscription must exactly match --subscription. Set it explicitly with az account set.");
   }
-  if (az(["cloud", "show"])?.name !== "AzureCloud") throw new Error("Only the public AzureCloud cloud is supported by this scaffold.");
-  const exists = az(["group", "exists", "--name", n.group]);
+  if ((await az(["cloud", "show"]))?.name !== "AzureCloud") throw new Error("Only the public AzureCloud cloud is supported by this scaffold.");
+  const exists = await az(["group", "exists", "--name", n.group]);
   if (typeof exists !== "boolean") throw new Error("Azure did not return a valid resource-group existence result.");
-  const group = exists ? assertOwnedGroup(az(["group", "show", "--name", n.group]), config) : undefined;
+  const group = exists ? assertOwnedGroup(await az(["group", "show", "--name", n.group]), config) : undefined;
 
   if (config.command === "uninstall") {
     if (!group) throw new Error("The confirmed scenario resource group does not exist.");
     if (group.tags["dojo.customDomain"]) {
       log(`WARNING: Remove this run's Cloudflare CNAME for ${group.tags["dojo.customDomain"]} before releasing the hostname. Teardown deletes only Azure resources, not DNS or shared records.`);
     }
-    az(["group", "delete", "--name", n.group, "--yes"]);
-    if (az(["group", "exists", "--name", n.group]) !== false) throw new Error("Teardown has not completed; the resource group still exists.");
+    await az(["group", "delete", "--name", n.group, "--yes"]);
+    if (await az(["group", "exists", "--name", n.group]) !== false) throw new Error("Teardown has not completed; the resource group still exists.");
     log(`Deleted only ${n.group}. Subscription Defender pricing was NOT changed. Review it separately; do not disable a plan used by others.`);
     return { deleted: n.group, subscriptionPlansChanged: false, dnsRecordsRetained: Boolean(group.tags["dojo.customDomain"]) };
   }
 
-  function deployInfrastructure(desired) {
-    const deployment = az([
+  async function deployInfrastructure(desired) {
+    const deployment = await az([
       "deployment", "sub", "create", "--name", n.deployment, "--location", config.location,
       "--template-file", join(ROOT, "infra", "main.bicep"),
       "--parameters", ...parameters(config, desired),
@@ -119,15 +119,15 @@ export async function execute(config, dependencies = {}) {
     const providers = ["Microsoft.Web", "Microsoft.Cdn", "Microsoft.Network", "Microsoft.OperationalInsights", "Microsoft.Insights", "Microsoft.Security"];
     if (desired.enableSentinel) providers.push("Microsoft.SecurityInsights");
     for (const provider of providers) {
-      if (az(["provider", "show", "--namespace", provider])?.registrationState !== "Registered") {
+      if ((await az(["provider", "show", "--namespace", provider]))?.registrationState !== "Registered") {
         throw new Error(`${provider} is not registered. Register it explicitly after reviewing subscription-wide effects, then rerun doctor.`);
       }
     }
-    const regions = az(["appservice", "list-locations", "--sku", "B1", "--linux-workers-enabled"]);
+    const regions = await az(["appservice", "list-locations", "--sku", "B1", "--linux-workers-enabled"]);
     if (!Array.isArray(regions) || !regions.some((region) => region.name?.replaceAll(" ", "").toLowerCase() === config.location)) {
       throw new Error("Selected region is unavailable for Linux App Service B1; select a supported training region.");
     }
-    const runtimes = az(["webapp", "list-runtimes", "--os", "linux"]);
+    const runtimes = await az(["webapp", "list-runtimes", "--os", "linux"]);
     if (!Array.isArray(runtimes) || !runtimes.some((runtime) => String(runtime).replace(":", "|") === `PHP|${config.phpVersion}`)) {
       throw new Error("Selected PHP stack is not advertised by App Service; do not silently substitute a runtime.");
     }
@@ -146,13 +146,13 @@ export async function execute(config, dependencies = {}) {
         ...(desired.enableSentinel ? ["Microsoft.SecurityInsights/onboardingStates/write", "Microsoft.SecurityInsights/alertRules/write"] : []),
       ]],
     ]) {
-      const permissions = readAzureCollection(az,
+      const permissions = await readAzureCollection(az,
         `https://management.azure.com${scope}/providers/Microsoft.Authorization/permissions?api-version=2022-04-01`);
       if (actions.some((action) => !hasPermission(permissions, action))) {
         throw new Error(`Required deployment permissions are missing at ${scope}. See docs/operations.md; do not grant broad roles automatically.`);
       }
     }
-    const result = az([
+    const result = await az([
       "deployment", "sub", "what-if", "--name", n.deployment, "--location", config.location,
       "--template-file", join(ROOT, "infra", "main.bicep"),
       "--parameters", ...parameters(config, desired), "--result-format", "FullResourcePayloads",
@@ -166,31 +166,31 @@ export async function execute(config, dependencies = {}) {
     const desired = desiredState(config, group, dependencies.now);
     await preflight(desired);
     if (config.command === "doctor") return { preflight: "passed", desired };
-    deployInfrastructure(desired);
+    await deployInfrastructure(desired);
     const artifact = (dependencies.packageApp ?? packageApp)(ROOT);
     try {
-      az(["webapp", "deploy", "--resource-group", n.group, "--name", n.app,
+      await az(["webapp", "deploy", "--resource-group", n.group, "--name", n.app,
         "--src-path", artifact.path, "--type", "zip", "--clean", "true", "--restart", "true",
         "--async", "false", "--track-status", "true", "--timeout", "600000"]);
     } finally {
       artifact.cleanup();
     }
-    const updated = assertOwnedGroup(az(["group", "show", "--name", n.group]), config);
+    const updated = assertOwnedGroup(await az(["group", "show", "--name", n.group]), config);
     return validate(updated, true);
   }
 
   if (!group) throw new Error("Deploy the exact isolated scenario before this command.");
 
-  function liveContext(currentGroup, { requireDomainReady = true } = {}) {
-    const profile = get(n.profileId, CDN_API);
-    const endpoint = get(n.endpointId, CDN_API);
-    const app = assertResource(az(["webapp", "show", "--resource-group", n.group, "--name", n.app]), n.appId);
-    const policy = get(n.policyId, WAF_API);
-    const association = get(`${n.profileId}/securityPolicies/application-waf`, CDN_API).properties?.parameters;
-    const route = get(`${n.endpointId}/routes/application`, CDN_API).properties;
-    const origin = get(`${n.profileId}/originGroups/application/origins/application`, CDN_API).properties;
-    const plan = get(n.planId, "2025-03-01");
-    const settings = az(["webapp", "config", "show", "--resource-group", n.group, "--name", n.app]);
+  async function liveContext(currentGroup, { requireDomainReady = true } = {}) {
+    const profile = await get(n.profileId, CDN_API);
+    const endpoint = await get(n.endpointId, CDN_API);
+    const app = assertResource(await az(["webapp", "show", "--resource-group", n.group, "--name", n.app]), n.appId);
+    const policy = await get(n.policyId, WAF_API);
+    const association = (await get(`${n.profileId}/securityPolicies/application-waf`, CDN_API)).properties?.parameters;
+    const route = (await get(`${n.endpointId}/routes/application`, CDN_API)).properties;
+    const origin = (await get(`${n.profileId}/originGroups/application/origins/application`, CDN_API)).properties;
+    const plan = await get(n.planId, "2025-03-01");
+    const settings = await az(["webapp", "config", "show", "--resource-group", n.group, "--name", n.app]);
     const hasCustomDomain = currentGroup.tags["dojo.customDomainReady"] === "true";
     const expectedDomains = [n.endpointId, ...(hasCustomDomain ? [n.customDomainId] : [])];
     const sameDomains = (actual, expected) => Array.isArray(actual) && actual.length === expected.length
@@ -238,7 +238,7 @@ export async function execute(config, dependencies = {}) {
       throw new Error("Managed WAF or the benign correlation rule differs from the documented configuration.");
     }
     if (!UUID.test(app.identity?.principalId)) throw new Error("App Service managed identity is missing.");
-    const customDomain = hasCustomDomain ? get(n.customDomainId, CDN_API).properties : undefined;
+    const customDomain = hasCustomDomain ? (await get(n.customDomainId, CDN_API)).properties : undefined;
     if (hasCustomDomain && (customDomain?.hostName !== currentGroup.tags["dojo.customDomain"]
         || customDomain.tlsSettings?.certificateType !== "ManagedCertificate"
         || customDomain.tlsSettings?.minimumTlsVersion !== "TLS12"
@@ -256,7 +256,7 @@ export async function execute(config, dependencies = {}) {
   }
 
   async function validate(currentGroup, retry = false) {
-    const context = liveContext(currentGroup);
+    const context = await liveContext(currentGroup);
     const http = (url, options = {}) => request(url, { ...options, fetchImpl: dependencies.fetchImpl });
     let health;
     let readinessError;
@@ -313,7 +313,7 @@ export async function execute(config, dependencies = {}) {
         }
       }
     }
-    const workspace = get(n.workspaceId, "2025-07-01");
+    const workspace = await get(n.workspaceId, "2025-07-01");
     if (workspace.properties?.provisioningState !== "Succeeded") throw new Error("Workspace is not healthy.");
     if (workspace.properties?.workspaceCapping?.dailyQuotaGb !== 1 || workspace.properties?.retentionInDays !== 30) {
       throw new Error("Workspace ingestion/retention differs from the reviewed cost boundary.");
@@ -322,7 +322,7 @@ export async function execute(config, dependencies = {}) {
       [n.profileId, ["FrontDoorAccessLog", "FrontDoorWebApplicationFirewallLog", "FrontDoorHealthProbeLog"]],
       [n.appId, ["AppServiceHTTPLogs", "AppServiceConsoleLogs"]],
     ]) {
-      const diagnostics = az(["monitor", "diagnostic-settings", "list", "--resource", id]);
+      const diagnostics = await az(["monitor", "diagnostic-settings", "list", "--resource", id]);
       const entries = Array.isArray(diagnostics) ? diagnostics : diagnostics?.value;
       if (!Array.isArray(entries) || !categories.every((category) => entries.some((entry) =>
         sameId(entry.workspaceId ?? entry.properties?.workspaceId, n.workspaceId)
@@ -331,23 +331,23 @@ export async function execute(config, dependencies = {}) {
       }
     }
     for (const policy of ["ftp", "scm"]) {
-      const resource = get(`${n.appId}/basicPublishingCredentialsPolicies/${policy}`, "2025-03-01");
+      const resource = await get(`${n.appId}/basicPublishingCredentialsPolicies/${policy}`, "2025-03-01");
       if (resource.properties?.allow !== false) throw new Error("Basic publishing credentials must remain disabled.");
     }
-    const roles = az(["role", "assignment", "list", "--scope", n.appId, "--include-inherited",
+    const roles = await az(["role", "assignment", "list", "--scope", n.appId, "--include-inherited",
       "--fill-principal-name", "false",
       "--query", `[?principalId=='${context.principalId}'].{id:id,roleDefinitionId:roleDefinitionId}`]);
     if (!Array.isArray(roles) || roles.length !== 0) throw new Error("The app identity has unexpected role grants. Review and remove unnecessary permissions; this lab needs none.");
-    const posture = az(["security", "pricing", "show", "--name", "CloudPosture"]);
+    const posture = await az(["security", "pricing", "show", "--name", "CloudPosture"]);
     if (!["Free", "Standard"].includes(posture?.pricingTier)) throw new Error("Cannot establish Defender CSPM pricing state.");
     if (currentGroup.tags["dojo.defenderCspmExpected"] === "true" && posture.pricingTier !== "Standard") {
       throw new Error("Explicitly requested Defender CSPM does not report Standard.");
     }
     let sentinel = null;
     if (currentGroup.tags["dojo.sentinel"] === "true") {
-      get(`${n.workspaceId}/providers/Microsoft.SecurityInsights/onboardingStates/default`, "2025-09-01");
+      await get(`${n.workspaceId}/providers/Microsoft.SecurityInsights/onboardingStates/default`, "2025-09-01");
       const collectionId = `${n.workspaceId}/providers/Microsoft.SecurityInsights/alertRules`;
-      const rules = readAzureCollection(az, `https://management.azure.com${collectionId}?api-version=2025-09-01`)
+      const rules = (await readAzureCollection(az, `https://management.azure.com${collectionId}?api-version=2025-09-01`))
         .filter((rule) => rule?.properties?.displayName === SENTINEL_RULE_DISPLAY_NAME);
       if (rules.length !== 1) throw new Error("Sentinel synthetic rule is missing or ambiguous; run repair after review.");
       const [rule] = rules;
@@ -397,7 +397,7 @@ export async function execute(config, dependencies = {}) {
       }
       return validate(group);
     }
-    const context = liveContext(group, { requireDomainReady: false });
+    const context = await liveContext(group, { requireDomainReady: false });
     const environment = dependencies.environment ?? process.env;
     const dns = {
       service: "front-door", owner: `ninjapaw/${SCENARIO}:dev:${config.suffix}`, domain,
@@ -410,8 +410,8 @@ export async function execute(config, dependencies = {}) {
     assertDomainInZone(domain, await cloudflare.loadZone());
     const desired = { ...desiredState(config, group, dependencies.now), customDomainName: domain };
     await preflight(desired);
-    deployInfrastructure(desired);
-    const pending = get(n.customDomainId, CDN_API).properties;
+    await deployInfrastructure(desired);
+    const pending = (await get(n.customDomainId, CDN_API)).properties;
     if (pending?.hostName !== domain || pending.tlsSettings?.certificateType !== "ManagedCertificate"
         || pending.tlsSettings?.minimumTlsVersion !== "TLS12") {
       throw new Error("Azure did not create the exact managed-TLS Front Door custom domain; no DNS records were written.");
@@ -421,21 +421,21 @@ export async function execute(config, dependencies = {}) {
       log(`[${action.action}] ${action.type} ${action.name}`);
     }
     await verifyAzureDns(dns, dependencies.resolver);
-    const approved = get(n.customDomainId, CDN_API).properties;
+    const approved = (await get(n.customDomainId, CDN_API)).properties;
     if (approved?.hostName !== domain || approved.domainValidationState !== "Approved") {
       throw new Error("Azure custom-domain ownership is not Approved yet. Allow DNS propagation and rerun domain. Expired/rejected validation needs explicit Azure token regeneration; no new route association was attempted.");
     }
     const associated = { ...desired, associateCustomDomain: true };
     await preflight(associated);
-    deployInfrastructure(associated);
-    const updated = assertOwnedGroup(az(["group", "show", "--name", n.group]), config);
+    await deployInfrastructure(associated);
+    const updated = assertOwnedGroup(await az(["group", "show", "--name", n.group]), config);
     return validate(updated, true);
   }
 
   if (config.command === "validate") return validate(group);
   if (config.command === "simulate") {
     await validate(group);
-    const context = liveContext(group);
+    const context = await liveContext(group);
     if (context.labState !== "training") throw new Error("Simulation surfaces are disabled after remediation. Use validate for closure checks.");
     const runId = randomUUID();
     const startedAt = new Date().toISOString();
@@ -463,16 +463,8 @@ export async function execute(config, dependencies = {}) {
   }
   if (config.command === "investigate") {
     const { huntingGuide } = await import("./lib/hunting.mjs");
-    const context = liveContext(group);
-    const query = `securityresources
-| where type in~ ('microsoft.security/assessments', 'microsoft.security/assessments/subassessments')
-| extend Details = tostring(properties)
-| extend AssessedResourceId = coalesce(tostring(properties.resourceDetails.id), tostring(properties.resourceDetails.Id))
-| where id startswith '${n.groupId}/' or AssessedResourceId startswith '${n.groupId}/' or AssessedResourceId =~ '${n.appId}'
-| where Details contains 'PHP' or Details contains 'CVE-2026-109618' or Details contains 'CVE-2026-109619'
-| project AssessmentId=id, DisplayName=tostring(properties.displayName), Status=tostring(properties.status.code)
-| limit 50`;
-    const records = az(["graph", "query", "--graph-query", query, "--subscriptions", config.subscription]);
+    const context = await liveContext(group);
+    const records = await az(["graph", "query", "--graph-query", investigationQuery(config), "--subscriptions", config.subscription]);
     if (!Array.isArray(records?.data)) throw new Error("Invalid Resource Graph assessment response. Install the resource-graph Azure CLI extension if missing.");
     log(JSON.stringify({
       resourceGroup: n.group,
@@ -488,6 +480,18 @@ export async function execute(config, dependencies = {}) {
     return records.data;
   }
   throw new Error("Unhandled command.");
+}
+
+export function investigationQuery(config) {
+  const n = names(config);
+  return `securityresources
+| where type in~ ('microsoft.security/assessments', 'microsoft.security/assessments/subassessments')
+| extend Details = tostring(properties)
+| extend AssessedResourceId = coalesce(tostring(properties.resourceDetails.id), tostring(properties.resourceDetails.Id))
+| where id startswith '${n.groupId}/' or AssessedResourceId startswith '${n.groupId}/' or AssessedResourceId =~ '${n.appId}'
+| where Details contains 'PHP' or Details contains 'CVE-2026-109618' or Details contains 'CVE-2026-109619'
+| project AssessmentId=id, DisplayName=tostring(properties.displayName), Status=tostring(properties.status.code)
+| limit 50`;
 }
 
 export async function main(args = process.argv.slice(2)) {

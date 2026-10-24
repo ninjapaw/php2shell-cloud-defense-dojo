@@ -1,0 +1,11 @@
+{
+  "environment": "dev",
+  "resourceGroup": "NP-PHPToProof-Operator-Dev-CentralUS",
+  "rawEvidenceRetentionDays": 7,
+  "credentialSecret": "operator-admin-verifier",
+  "sourceComparison": "raw-source-versus-enabled-defender",
+  "allowProtectionChanges": false,
+  "allowContainerExecution": false,
+  "allowDefenderPlanChanges": false,
+  "automaticPublicPublication": false
+}

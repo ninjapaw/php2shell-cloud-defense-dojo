@@ -46,11 +46,40 @@ without JavaScript, and never enables a plan or runs a simulation.
 
 The attack chapters follow fictional **Ghostpaw** through five moves: probe,
 PHP error, attempted shell, attempted outbound contact, and a fabricated ledger.
-Each pairs a synthetic log excerpt with a clearly labelled, conditional Defender
+Each pairs an actual captured synthetic event with a clearly labelled, conditional Defender
 detection reference and a control that breaks the chain. The alert-results matrix
 separates WAF logs, CSPM posture, workload detection, and optional Sentinel alerts.
 Reference cards are not observed alerts or screenshots; the public story never
 executes the attack.
+
+### Authenticated operator console and recorded evidence
+
+The separate [operator console](operator/README.md) uses Key Vault-backed admin
+credentials, durable private audit/queue/session storage and the existing guarded
+simulator. Its identity is separate from the unprivileged public PHP app. Only
+bounded harmless/read-only actions are available; no arbitrary commands, Defender
+toggles, destructive actions or automatic public publication are exposed.
+
+Actual captures keep HTTP outcomes, UTC/run IDs, real WAF records, explicitly
+synthetic app events, actual posture and independently observed workload alerts
+separate. Raw records stay private. Public walkthrough snapshots require a
+separate reviewed, redacted static publication. Comparing source logs available
+without Defender to enabled Defender observations is not a claim that an existing
+subscription's Defender plans were disabled.
+
+Recorded deployment:
+
+- [Administrator sign-in](https://p2p-proof1023c-operator-dacubycsdbh4etck.b01.azurefd.net/login)
+- [Walkthrough and actual per-move logs](https://php2proof.ninjapaws.org/walkthrough.php#recorded)
+- [Reviewed GhostPaw recording](https://php2proof.ninjapaws.org/evidence/92ad189c-9a88-4403-b773-52453963e4b8)
+
+This recording has five HTTP 200s, five ingested synthetic events, an actual
+Detection-mode WAF match, four Healthy posture assessments and no returned
+workload alerts. It is not a Defender-disabled experiment. Administrator
+credentials are in the private `p2p-proof1023c-operator` Key Vault; see
+[access and credentials](operator/README.md#access-and-credentials). The original
+test deadline is **2026-10-24 18:45:04.967 UTC**. Expiry is not automatic resource
+deletion.
 
 ## Learning objectives and evidence boundaries
 

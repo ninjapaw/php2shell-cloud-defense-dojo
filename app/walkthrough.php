@@ -14,47 +14,60 @@ $moves = [
     [
         'signal' => 'request',
         'title' => 'A stranger at the edge',
-        'intent' => 'Ghostpaw probes the public PHP entry point, looking for a way in.',
-        'without' => 'Request/WAF logs need manual triage; they are not a workload alert.',
+        'intent' => 'Ghostpaw probes the public PHP entry point.',
+        'without' => 'Triage request/WAF logs manually; these are not workload alerts.',
         'category' => 'Injection attempts',
-        'with' => 'Real injection patterns may produce a detection; this harmless marker is not one.',
+        'with' => 'Supported injection detectors need real patterns, not this marker.',
         'control' => 'Keep the origin Front Door-only; verify the WAF rule/action.',
     ],
     [
         'signal' => 'php-error',
         'title' => 'An error becomes a clue',
-        'intent' => 'Ghostpaw hopes a PHP parsing weakness will turn input into code execution.',
-        'without' => 'A simulated error is a clue, not a crash or an affected-runtime finding.',
+        'intent' => 'Ghostpaw tries to turn PHP input into execution.',
+        'without' => 'An error fixture is not a crash or affected-runtime finding.',
         'category' => 'Remote code execution',
-        'with' => 'Real suspicious requests may produce a detection; an error fixture proves no CVE coverage.',
+        'with' => 'A fixture proves no CVE coverage; inspect actual request detections.',
         'control' => 'Check the actual PHP version/advisory; patch affected components.',
     ],
     [
         'signal' => 'process-synthetic',
         'title' => 'The attempted jump to a shell',
-        'intent' => 'Ghostpaw tries to escape the request handler and start a child process.',
-        'without' => 'Process-shaped fixture only. No process was started; no endpoint telemetry exists.',
+        'intent' => 'Ghostpaw attempts a child process outside the request handler.',
+        'without' => 'Process fixture only; no process started or endpoint telemetry.',
         'category' => 'Web shell activity',
-        'with' => 'Real process behavior may produce a detection; this fixture creates no process or MDE event.',
+        'with' => 'Inspect real supported detections; this fixture creates no process or MDE event.',
         'control' => 'Remove execution paths; keep zero runtime role grants.',
     ],
     [
         'signal' => 'outbound-synthetic',
         'title' => 'A call that never leaves',
-        'intent' => 'Ghostpaw wants the compromised workload to contact an external destination.',
-        'without' => 'Connection-shaped fixture only. No network connection was made; no real destination exists.',
+        'intent' => 'Ghostpaw tries to contact an external destination.',
+        'without' => 'Connection fixture only; no connection or real destination.',
         'category' => 'Compromise indicators',
-        'with' => 'No egress occurs here, so no network detection is demonstrated.',
+        'with' => 'No egress; no network detection is demonstrated.',
         'control' => 'Corroborate network evidence; a fixture is not command and control.',
     ],
     [
         'signal' => 'canary',
         'title' => 'The ledger stays fictional',
-        'intent' => 'Ghostpaw looks for valuable records and credentials to take away.',
-        'without' => 'Three fabricated records; no secret, Azure data-plane read, or exfiltration.',
+        'intent' => 'Ghostpaw searches for records and credentials.',
+        'without' => 'Three fabricated records; no secret/data-plane read or exfiltration.',
         'category' => 'No guaranteed data-access alert',
-        'with' => 'No real sensitive data or canary detector exists; review actual supported findings.',
+        'with' => 'No sensitive data or canary detector; inspect actual findings.',
         'control' => 'Keep records fabricated; verify removal of training endpoints.',
+    ],
+];
+$recordedRun = [
+    'id' => '92ad189c-9a88-4403-b773-52453963e4b8',
+    'startedAt' => '2026-10-24T16:33:41.463Z',
+    'endedAt' => '2026-10-24T16:33:43.454Z',
+    'capturedAt' => '2026-10-24T16:36:07.232Z',
+    'applicationUtc' => [
+        'request' => '2026-10-24T16:33:41.5811447Z',
+        'php-error' => '2026-10-24T16:33:41.9488945Z',
+        'process-synthetic' => '2026-10-24T16:33:42.2912096Z',
+        'outbound-synthetic' => '2026-10-24T16:33:42.9044386Z',
+        'canary' => '2026-10-24T16:33:43.4246796Z',
     ],
 ];
 ?>
@@ -75,7 +88,7 @@ $moves = [
     <section class="hero">
       <p class="eyebrow">MISSION BRIEFING / A GUIDED CODE-TO-CLOUD STORY</p>
       <h1>PHP to Proof.<br><span>The request that wanted a shell.</span></h1>
-      <p class="intro">Follow fictional Ghostpaw through five moves, from probe to ledger. Compare the analyst's view with and without Defender.</p>
+      <p class="intro">Follow Ghostpaw's five moves. <a href="/evidence/92ad189c-9a88-4403-b773-52453963e4b8">Recorded run: real logs and Defender observations</a>.</p>
       <p class="walkthrough-state"><strong>Application state: <?= escape($state) ?>.</strong> <?= $fixed ? 'Training endpoints have been removed. Read the story, but do not expect the simulator to run against this fixed application.' : 'Synthetic endpoints are available to the bounded operator simulator. Reading this guide does not run them.' ?></p>
       <p class="walkthrough-notice"><strong>Defender and Sentinel status: not queried by this page.</strong> Capabilities below are not live badges; omitted flags do not mean off. No additional app permissions are needed.</p>
       <p class="evidence-label">REAL / edge behavior &middot; SYNTHETIC / app excerpts &middot; REFERENCE / conditional detections</p>
@@ -85,6 +98,7 @@ $moves = [
       <h2>Your investigation route</h2>
       <ol>
         <li><a href="#briefing">Brief the team</a></li>
+        <li><a href="#recorded">Inspect the recorded live run</a></li>
         <li><a href="#attack">Follow the five attack moves</a></li>
         <li><a href="#alerts">See alerts and expected results</a></li>
         <li><a href="#request">Generate one bounded run</a></li>
@@ -101,15 +115,23 @@ $moves = [
     <section id="briefing" class="walkthrough-chapter" aria-labelledby="briefing-title">
       <p class="number">00 / SET THE EVIDENCE CONTRACT</p>
       <h2 id="briefing-title">Tonight, Ghostpaw knocks on the PHP application</h2>
-      <p>Ghostpaw is fictional. The objective is not: turn an exposed request handler into execution, then reach valuable data. Your job is to find where evidence ends and assumptions begin.</p>
+      <p>Ghostpaw is fictional. The goal: reach execution and valuable data. Find where evidence ends and assumptions begin.</p>
       <p>Linux PHP, three fabricated records, zero runtime role grants. Front Door/WAF is public; its service tag and profile header restrict the origin.</p>
       <p class="footnote">Use an approved owned dev lab and the operator guide. Stop on ownership/HTTPS/origin failures. Expiry is not deletion; the log cap is not a budget.</p>
+    </section>
+
+    <section id="recorded" class="walkthrough-chapter" aria-labelledby="recorded-title">
+      <p class="number">HISTORICAL CAPTURE / NOT LIVE</p>
+      <h2 id="recorded-title">The actual recording</h2>
+      <p><code><?= escape($recordedRun['id']) ?></code>: <?= escape($recordedRun['startedAt']) ?> to <?= escape($recordedRun['endedAt']) ?>; collected <?= escape($recordedRun['capturedAt']) ?> (UTC).</p>
+      <p><strong>Baseline:</strong> five HTTP 200s / five synthetic records. Block/Detection is <strong>not enforced blocking</strong>. <strong>Defender:</strong> AppServices/CloudPosture/Containers Standard. The direct provider alert query succeeded and returned <code>[]</code> for the exact app/window. Four Healthy assessments are not four detections, not necessarily exclusive to paid CSPM.</p>
+      <p class="walkthrough-notice"><strong>Not a Defender-disabled control run.</strong> Source logs are independently available. References are not fired alerts; missing alerts are not proof of safety. Provenance: recording link above.</p>
     </section>
 
     <section id="attack" class="walkthrough-chapter" aria-labelledby="attack-title">
       <p class="number">01 / FOLLOW THE ATTACK STORY</p>
       <h2 id="attack-title">Five moves, two investigation views</h2>
-      <p>Read left to right: Ghostpaw's intent, the analyst's raw clues, then the conditional Defender result. Story order is not a detection or ingestion timetable.</p>
+      <p>Intent, raw clues, conditional Defender result. Story order is not a detection or ingestion timetable.</p>
       <nav class="attack-map" aria-label="Fictional attack chain"><ol>
         <?php foreach ($moves as $move): ?>
         <li><a href="#move-<?= escape($move['signal']) ?>"><?= escape($move['title']) ?></a></li>
@@ -125,14 +147,23 @@ $moves = [
             <p class="evidence-label">WITHOUT WORKLOAD DEFENDER / RAW CLUES</p>
             <h4>What the analyst can see</h4>
             <p><?= escape($move['without']) ?></p>
-            <details><summary>Illustrative synthetic log excerpt</summary>
-              <pre data-example-signal="<?= escape($move['signal']) ?>"><code><?= escape(json_encode([
-                  'synthetic' => true,
-                  'signal' => $move['signal'],
-                  'runId' => '44444444-4444-4444-8444-444444444444',
-                  'evidenceKind' => 'synthetic-application-log',
+            <details open><summary>Actual ingested log from the recorded run</summary>
+              <p class="footnote" data-recorded-http="200">HTTP 200 / historical capture.</p>
+              <pre data-recorded-signal="<?= escape($move['signal']) ?>"><code><?= escape(json_encode([
+                  'Utc' => $recordedRun['applicationUtc'][$move['signal']],
+                  'Signal' => $move['signal'],
+                  'Synthetic' => true,
+                  'EvidenceKind' => 'synthetic-application-log',
               ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)) ?></code></pre>
-              <p>Example fields, not a captured run. Actual responses add UTC/resource context.</p>
+              <?php if ($move['signal'] === 'request'): ?>
+              <p>Captured WAF marker:</p>
+              <pre data-recorded-waf><code><?= escape(json_encode([
+                  'Utc' => '2026-10-24T16:33:41.0000000Z',
+                  'Rule' => 'DojoBenignMarker',
+                  'Action' => 'Block',
+                  'WafMode' => 'detection',
+              ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)) ?></code></pre>
+              <?php endif; ?>
             </details>
           </article>
           <article class="walkthrough-with">
@@ -145,7 +176,7 @@ $moves = [
         <p><strong>Break the chain:</strong> <?= escape($move['control']) ?></p>
       </article>
       <?php endforeach; ?>
-      <p>Categories follow the <a href="https://learn.microsoft.com/azure/defender-for-cloud/alerts-azure-app-service">App Service alert reference</a>, not fixed names or CVE signatures. Verify Linux/detector support. No special canary detector exists here.</p>
+      <p><a href="https://learn.microsoft.com/azure/defender-for-cloud/alerts-azure-app-service">App Service alert reference</a>: verify Linux/detector support. No fixed names, CVE coverage, or canary detector are asserted.</p>
     </section>
 
     <section id="alerts" class="walkthrough-chapter" aria-labelledby="alerts-title">
@@ -164,25 +195,25 @@ $moves = [
           </tbody>
         </table>
       </div>
-      <p>In Defender for Cloud &gt; Security alerts, filter the exact asset/time. Save only returned alert IDs, titles, severity, evidence, and status. Posture is separate. These cards must never fill an empty queue.</p>
+      <p>Defender for Cloud &gt; Security alerts: filter asset/time; save returned IDs, titles, severity, evidence, status. Posture is separate. Never fill an empty queue with reference cards.</p>
     </section>
 
     <section id="request" class="walkthrough-chapter" aria-labelledby="request-title">
       <h2 id="request-title">Show the moves without performing an exploit</h2>
       <pre><code>bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
-      <p>Live target validation precedes five benign requests sharing a new UUIDv4. Only the first carries <code>dojoProbe=waf-marker</code>. Save your run and UTC window, not the example UUID.</p>
+      <p>Validate first; five benign requests share a new UUIDv4. Only the first carries <code>dojoProbe=waf-marker</code>. Save that run/UTC window.</p>
       <p class="walkthrough-check"><strong>Detection:</strong> five HTTP 200s. WAF evaluates the marker; PHP emits fixtures. No command, payload, arbitrary destination, or browser run control is provided.</p>
     </section>
 
     <section id="correlate" class="walkthrough-chapter" aria-labelledby="correlate-title">
       <h2 id="correlate-title">Build the evidence timeline</h2>
       <p>In workspace Logs, set <code>RunIdFilter</code> and UTC window. WAF records use <code>AzureDiagnostics</code>; PHP events use <code>AppServiceConsoleLogs</code>. Run <code>detections/waf-requests.kql</code> and <code>correlation.kql</code>, replacing <code>__APP_RESOURCE_ID__</code>.</p>
-      <p>Check actual rule/action, request/reference, resource/time, and <code>synthetic: true</code>. No <code>DeviceProcessEvents</code>/<code>DeviceNetworkEvents</code> are supplied here. Ingestion does not make simulated behavior real.</p>
+      <p>Check rule/action, request/reference, resource/time, <code>synthetic: true</code>. No <code>DeviceProcessEvents</code>/<code>DeviceNetworkEvents</code>. Ingestion does not make fixtures real.</p>
     </section>
 
     <section id="components" class="walkthrough-chapter" aria-labelledby="components-title">
       <h2 id="components-title">Choose the right protection layer</h2>
-      <p>Foundational CSPM offers free recommendations; paid CSPM adds supported graph/paths. Serverless protection is separate; pricing is not scanning. App Service is not an MDE device. Check actual plans/support in Environment settings; <strong>incident creation is disabled</strong> here.</p>
+      <p>Foundational CSPM: free recommendations. Paid CSPM: supported graph/paths. Serverless protection is separate; pricing is not scanning. App Service is not MDE. Verify plans/support in Environment settings; <strong>incident creation is disabled</strong>.</p>
     </section>
 
     <section id="baseline" class="walkthrough-chapter" aria-labelledby="baseline-title">
@@ -203,7 +234,7 @@ $moves = [
       <h2 id="sentinel-title">Correlation is not automatically an incident</h2>
       <p>Hunt manually without Sentinel. <code>--enable-sentinel</code> installs a disabled rule; <code>--enable-analytics</code> additionally enables evaluation. Review costs and plan/deploy flags.</p>
       <div class="alert-preview"><span class="evidence-label">CONFIGURED RULE / NOT AN OBSERVED ALERT</span><h3>PHP to Proof - SYNTHETIC multi-signal training correlation</h3><p>Severity: Informational. Source: Sentinel scheduled analytics, not Defender. Incident creation: disabled.</p></div>
-      <p>Every 15 minutes over one hour: WAF marker and at least two distinct synthetic app signals, same run, recent ingestion. Late data can miss; matches can repeat. No timing guarantee. <code>createIncident: false</code>; no connector/playbook.</p>
+      <p>15-minute evaluation / one-hour window: WAF marker and at least two distinct synthetic app signals, same run, recent ingestion. Late data can miss; matches repeat. No timing guarantee. <code>createIncident: false</code>; no connector/playbook.</p>
     </section>
 
     <section id="protect" class="walkthrough-chapter" aria-labelledby="protect-title">
@@ -221,19 +252,19 @@ bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
       <pre><code>bash scripts/dojo.sh remediate --environment dev --yes
 bash scripts/dojo.sh validate --environment dev</code></pre>
       <p>Fixed state: all five signals 404 <strong>without the WAF marker</strong>; marked 403 alone proves nothing. Homepage/health still work. <code>simulate</code> refuses fixed; repair preserves fixed/Prevention/expiry, not a verified CVE fix.</p>
-      <p>Actual findings need patch/assessment evidence. For teardown, follow the guide's exact-owned-group confirmation; remove its CNAME before releasing the hostname. Review DNS, shared plans, and private AKS separately.</p>
+      <p>Findings need patch/assessment evidence. Teardown requires exact-owned-group confirmation; remove its CNAME before releasing the hostname. Review DNS/shared plans/private AKS separately.</p>
     </section>
 
     <section id="containers" class="walkthrough-chapter" aria-labelledby="containers-title">
       <p class="number">OPTIONAL ADVANCED TRACK / A DIFFERENT LAB</p>
       <h2 id="containers-title">Want real affected-versus-fixed image evidence?</h2>
-      <p><code>docs/container-lab.md</code>: private image comparison, existing plans/sensors. Verify actual findings. No exploit, public ingress, or guaranteed alert. Separate costs/teardown.</p>
+      <p><code>docs/container-lab.md</code>: private affected/fixed images, existing plans/sensors, verified findings. No exploit/public ingress/guaranteed alert. Separate costs/teardown.</p>
     </section>
 
     <section id="debrief" class="walkthrough-chapter" aria-labelledby="debrief-title">
       <p class="number">08 / DEBRIEF</p>
       <h2 id="debrief-title">What should you leave with?</h2>
-      <p>Save asset/run/UTC identities, WAF action, labelled fixtures, and real finding IDs. Verify isolation, fixed unmarked 404, ingestion, and cleanup. Full operator guide: <code>docs/walkthrough.md</code>.</p>
+      <p>Save asset/run/UTC, WAF action, fixtures, real finding IDs. Verify isolation, unmarked fixed 404, ingestion, cleanup. Guide: <code>docs/walkthrough.md</code>.</p>
     </section>
 
     <section id="glossary" class="walkthrough-chapter" aria-labelledby="glossary-title">

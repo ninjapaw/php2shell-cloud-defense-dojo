@@ -49,7 +49,7 @@ export function createAzureClient(config, runner = runTool) {
   };
 }
 
-export function readAzureCollection(az, initialUrl) {
+export async function readAzureCollection(az, initialUrl) {
   const expected = new URL(initialUrl);
   if (expected.origin !== "https://management.azure.com" || expected.username || expected.password || expected.hash) {
     throw new Error("Azure collection requests must use the public management endpoint without URL credentials or fragments.");
@@ -62,7 +62,7 @@ export function readAzureCollection(az, initialUrl) {
         || parsed.username || parsed.password || parsed.hash) {
       throw new Error("Unexpected Azure collection continuation URL.");
     }
-    const response = az(["rest", "--method", "get", "--url", url]);
+    const response = await az(["rest", "--method", "get", "--url", url]);
     if (!Array.isArray(response?.value)) throw new Error("Invalid Azure collection response: expected a value array.");
     if (response.nextLink != null && (typeof response.nextLink !== "string" || !response.nextLink.length)) {
       throw new Error("Invalid Azure collection continuation link.");

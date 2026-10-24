@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { parseConfigJson, parseInvocation, validateConfig, names } from "../scripts/lib/config.mjs";
 import {
   assertEndpointHost, assertOriginHost, assertOriginRestrictions, assertOwnedGroup,
@@ -7,6 +8,13 @@ import {
 } from "../scripts/lib/safety.mjs";
 import { configuration, DEFAULT_CONFIG, FDID, ownedGroup, restrictedConfig, SUBSCRIPTION } from "./support/harness.mjs";
 import { createAzureClient, readAzureCollection } from "../scripts/lib/azure.mjs";
+
+test("public recorded evidence routes its stylesheet but never the private console", () => {
+  const source = readFileSync(new URL("../infra/operator-routes.bicep", import.meta.url), "utf8");
+  const match = /resource publicEvidenceRoute\b[\s\S]*?patternsToMatch:\s*(\[[^\]]*\])/.exec(source);
+  assert.ok(match, "The reviewed public evidence route must be explicit.");
+  assert.deepEqual(JSON.parse(match[1].replaceAll("'", '"')), ["/evidence/*", "/style.css"]);
+});
 
 test("configuration and CLI reject production, unknown keys, invalid types and arbitrary targets", () => {
   for (const environment of ["prod", "production", "test", "DEV", "", "dev; echo unsafe"]) {
@@ -252,10 +260,10 @@ test("Azure webapp plan read-back normalizes CLI naming and rejects ambiguous id
   assert.deepEqual(other(["resource", "show"]), { appServicePlanId: planId });
 });
 
-test("Azure collection pagination is complete, bounded and restricted to the original management path", () => {
+test("Azure collection pagination is complete, bounded and restricted to the original management path", async () => {
   const url = `https://management.azure.com/subscriptions/${SUBSCRIPTION}/providers/Microsoft.Authorization/permissions?api-version=2022-04-01`;
   const calls = [];
-  const result = readAzureCollection((args) => {
+  const result = await readAzureCollection(async (args) => {
     calls.push(args);
     return calls.length === 1 ? { value: [1], nextLink: `${url}&skiptoken=next` } : { value: [2] };
   }, url);
@@ -266,16 +274,16 @@ test("Azure collection pagination is complete, bounded and restricted to the ori
     url.replace("https://", "https://unexpected:credential@"), `${url}#unexpected-fragment`,
   ]) {
     let requests = 0;
-    assert.throws(() => readAzureCollection(() => {
+    await assert.rejects(() => readAzureCollection(() => {
       requests += 1;
       return { value: [], nextLink };
     }, url), /continuation/);
     assert.equal(requests, 1, "A foreign/invalid continuation must not be requested.");
   }
-  assert.throws(() => readAzureCollection(() => ({}), url), /value array/);
-  assert.throws(() => readAzureCollection(() => ({ value: [] }), "https://example.invalid/"), /management endpoint/);
+  await assert.rejects(() => readAzureCollection(() => ({}), url), /value array/);
+  await assert.rejects(() => readAzureCollection(() => ({ value: [] }), "https://example.invalid/"), /management endpoint/);
   let pages = 0;
-  assert.throws(() => readAzureCollection(() => {
+  await assert.rejects(() => readAzureCollection(() => {
     pages += 1;
     return { value: [], nextLink: `${url}&page=${pages}` };
   }, url), /10-page limit/);

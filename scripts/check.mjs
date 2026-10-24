@@ -5,10 +5,11 @@ import { ROOT } from "./dojo.mjs";
 import { runTool } from "./lib/azure.mjs";
 
 const fix = process.argv.includes("--fix-line-endings");
-const roots = ["app", "container-lab", "scripts", "tests", "detections", "infra", "config", ".github"];
+const roots = ["app", "container-lab", "operator", "scripts", "tests", "detections", "infra", "config", ".github"];
 const files = [];
 function walk(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === "node_modules") continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) walk(path);
     else files.push(path);

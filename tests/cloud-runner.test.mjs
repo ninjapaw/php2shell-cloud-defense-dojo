@@ -77,12 +77,14 @@ test("cloud context contains only reviewed current deployment sources, never cre
   assert.match(bundle.sha256, /^[a-f0-9]{64}$/);
   const decoded = JSON.parse(gunzipSync(bundle.content));
   assert.equal(decoded.schemaVersion, 2);
-  assert.deepEqual(Object.keys(decoded.files), CLOUD_CONTEXT_FILES);
+  assert.deepEqual(Object.keys(decoded.files).toSorted(), CLOUD_CONTEXT_FILES.toSorted());
+  assert.ok(cloudContext().content.equals(bundle.content), "Lossless language-grouped source packing must be deterministic.");
   for (const [path, content] of Object.entries(decoded.files)) {
     assert.doesNotMatch(path, /(?:^|\/)(?:\.env|\.git|node_modules|output|container-lab)(?:\/|$)/);
     assert.ok(Buffer.from(content, "utf8").equals(readFileSync(join(ROOT, path))), path);
   }
   assert.ok(!decoded.files["detections/catalog.json"]);
+  assert.ok(!Object.keys(decoded.files).some((path) => path.startsWith("operator/")));
   assert.ok(decoded.files["app/walkthrough.php"].includes("PHP to Proof | Guided Walkthrough"));
   assert.ok(bundle.sourceBundle.chunks.every((chunk) => chunk.length <= 8000));
   assert.ok(bundle.sourceBundle.chunks.join("").length + Buffer.byteLength(JSON.stringify([])) <= 60 * 1024);

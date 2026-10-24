@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "runId": "92ad189c-9a88-4403-b773-52453963e4b8",
+  "startedAt": "2026-10-24T16:33:41.463Z",
+  "endedAt": "2026-10-24T16:33:43.454Z",
+  "capturedAt": "2026-10-24T16:36:07.232Z",
+  "requests": [
+    { "signal": "request", "status": 200, "synthetic": true },
+    { "signal": "php-error", "status": 200, "synthetic": true },
+    { "signal": "process-synthetic", "status": 200, "synthetic": true },
+    { "signal": "outbound-synthetic", "status": 200, "synthetic": true },
+    { "signal": "canary", "status": 200, "synthetic": true }
+  ],
+  "captures": {
+    "waf": {
+      "status": "queried",
+      "rows": [
+        { "Utc": "2026-10-24T16:33:41.0000000Z", "Rule": "DojoBenignMarker", "Action": "Block", "WafMode": "detection" }
+      ]
+    },
+    "application": {
+      "status": "queried",
+      "rows": [
+        { "Utc": "2026-10-24T16:33:41.5811447Z", "Signal": "request", "Synthetic": true, "EvidenceKind": "synthetic-application-log" },
+        { "Utc": "2026-10-24T16:33:41.9488945Z", "Signal": "php-error", "Synthetic": true, "EvidenceKind": "synthetic-application-log" },
+        { "Utc": "2026-10-24T16:33:42.2912096Z", "Signal": "process-synthetic", "Synthetic": true, "EvidenceKind": "synthetic-application-log" },
+        { "Utc": "2026-10-24T16:33:42.9044386Z", "Signal": "outbound-synthetic", "Synthetic": true, "EvidenceKind": "synthetic-application-log" },
+        { "Utc": "2026-10-24T16:33:43.4246796Z", "Signal": "canary", "Synthetic": true, "EvidenceKind": "synthetic-application-log" }
+      ]
+    },
+    "posture": {
+      "status": "queried",
+      "rows": [
+        { "Assessment": "Overly permissive permissions should not be configured on Function App, Web App or Logic App", "Status": "Healthy", "FirstEvaluationUtc": "2026-10-24T03:46:16.8379121Z" },
+        { "Assessment": "Web Application should only be accessible over HTTPS", "Status": "Healthy", "FirstEvaluationUtc": "2026-10-24T00:57:56.4037998Z" },
+        { "Assessment": "CORS should not allow every resource to access Web Applications", "Status": "Healthy", "FirstEvaluationUtc": "2026-10-24T00:57:56.2949313Z" },
+        { "Assessment": "Remote debugging should be turned off for Web Applications", "Status": "Healthy", "FirstEvaluationUtc": "2026-10-24T00:57:56.2572234Z" }
+      ]
+    },
+    "defenderAlerts": { "status": "queried", "rows": [] }
+  },
+  "plans": {
+    "AppServices": { "status": "queried", "tier": "Standard" },
+    "CloudPosture": { "status": "queried", "tier": "Standard" },
+    "Containers": { "status": "queried", "tier": "Standard" }
+  },
+  "comparison": "Actual app/WAF source evidence independently available without Defender, versus actual observations under the enabled Defender plans. Not a Defender-disabled control run.",
+  "classifications": {
+    "application": "Actual ingestion of explicitly synthetic fixtures, not process execution, outbound connections or compromise.",
+    "waf": "Actual custom-rule matches. Block with Detection and HTTP 200 is not enforced blocking or CVE protection.",
+    "posture": "Actual assessments, not workload alerts.",
+    "defenderAlerts": "Actual provider alerts only, exact-app/time-window correlation does not establish fixture causality.",
+    "missing": "Unavailable and not-yet-observed evidence are not successful detections or proof of safety."
+  },
+  "publication": "Sanitized, static snapshot requiring manual review; no live workspace or privileged API is exposed."
+}

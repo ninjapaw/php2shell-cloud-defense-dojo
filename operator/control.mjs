@@ -1,0 +1,200 @@
+import { randomUUID } from "node:crypto";
+import { execute, investigationQuery } from "../scripts/dojo.mjs";
+import { UUID } from "../scripts/lib/config.mjs";
+import { redact, assertOwnedGroup } from "../scripts/lib/safety.mjs";
+import { assertLive, LIMITS, OPERATIONS, OperatorError } from "./config.mjs";
+import { captureEvidence } from "./evidence.mjs";
+
+const JOB_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export class ControlPlane {
+  constructor(config, store, credentials, azureFactory, { run = execute, fetchImpl = fetch, now = Date.now, log = console.error } = {}) {
+    Object.assign(this, { config, store, credentials, azureFactory, run, fetchImpl, now, log });
+  }
+
+  async authorize(session) {
+    assertLive(this.config, this.now());
+    const stored = await this.store.read(`sessions/${session.hash}`);
+    const credential = await this.credentials();
+    if (!stored || stored.value.hash !== session.hash || !Number.isFinite(stored.value.expiresAt)
+        || stored.value.epoch !== credential.epoch || stored.value.epoch !== session.epoch
+        || stored.value.expiresAt <= this.now() || stored.value.expiresAt > this.config.expiresAt) {
+      throw new OperatorError(401, "session-expired", "Administrator authorization expired or was revoked.");
+    }
+  }
+
+  async start(session, operation, idempotencyKey, sourceJobId) {
+    await this.authorize(session);
+    if (!OPERATIONS.includes(operation) || !JOB_ID.test(idempotencyKey)) {
+      await this.store.audit("dispatch-denied", { session: session.hash, reason: "outside-catalogue" });
+      throw new OperatorError(400, "not-allowed", "Only the fixed harmless/read-only catalogue is executable.");
+    }
+    return this.store.withLease("dispatch", async () => {
+      if (operation === "collect-evidence") {
+        if (!JOB_ID.test(sourceJobId)) throw new OperatorError(400, "source-run-required", "Select an existing actual simulator run.");
+        const source = await this.store.read(`jobs/${sourceJobId}`);
+        if (!source || source.value.target !== this.config.names.appId || source.value.operation !== "simulate"
+            || !UUID.test(source.value.result?.runId)) throw new OperatorError(400, "source-run-required", "An actual persisted simulator result is required.");
+      } else if (sourceJobId !== undefined) {
+        throw new OperatorError(400, "unexpected-source", "This operation does not accept an external run or target.");
+      }
+      const existing = await this.store.read(`jobs/${idempotencyKey}`);
+      if (existing) {
+        if (existing.value.sessionHash !== session.hash || existing.value.operation !== operation || existing.value.sourceJobId !== sourceJobId) {
+          throw new OperatorError(409, "idempotency-conflict", "This request identifier already belongs to another action.");
+        }
+        return existing.value;
+      }
+      const current = await this.store.read("control/dispatch");
+      const timestamp = this.now();
+      const history = current ? current.value.starts : [];
+      if (!Array.isArray(history) || history.some((time) => !Number.isFinite(time))) throw new Error("Invalid durable dispatch counter.");
+      if (current?.value.activeJob) {
+        const active = await this.store.read(`jobs/${current.value.activeJob}`);
+        if (!active || ["queued", "running", "reconciliation-required"].includes(active.value.status)) {
+          throw new OperatorError(409, "busy", "An active or unresolved run already owns this lab.");
+        }
+      }
+      const starts = history.filter((time) => timestamp - time < 3_600_000);
+      if (starts.length >= LIMITS.startsPerHour || starts.some((time) => timestamp - time < LIMITS.startIntervalMs)) {
+        await this.store.audit("dispatch-rate-limited", { session: session.hash });
+        throw new OperatorError(429, "rate-limited", "Lab execution rate limit reached.");
+      }
+      const job = {
+        schemaVersion: 1, id: idempotencyKey, operation, status: "queued",
+        sessionHash: session.hash, credentialEpoch: session.epoch,
+        queuedAt: new Date(timestamp).toISOString(), expiresAt: this.config.expiry,
+        target: this.config.names.appId,
+        ...(sourceJobId ? { sourceJobId } : {}),
+      };
+      await this.store.audit("dispatch-intent", { jobId: job.id, operation, session: session.hash });
+      await this.store.write(`jobs/${job.id}`, job);
+      await this.store.write("control/dispatch", { starts: [...starts, timestamp], activeJob: job.id }, current?.etag);
+      try { await this.store.send(job.id); }
+      catch (error) {
+        const saved = await this.store.read(`jobs/${job.id}`);
+        await this.store.write(`jobs/${job.id}`, { ...job, status: "enqueue-failed", error: "Durable queue dispatch failed; no execution is asserted." }, saved.etag);
+        await this.store.audit("dispatch-failed", { jobId: job.id });
+        throw error;
+      }
+      return job;
+    });
+  }
+
+  async workOnce() {
+    return this.store.withLease("worker", async ({ assertLease }) => {
+      const message = await this.store.receive();
+      if (!message) return false;
+      let parsed;
+      try { parsed = JSON.parse(Buffer.from(message.messageText, "base64").toString("utf8")); }
+      catch {
+        await this.store.audit("queue-rejected", { reason: "invalid-message" });
+        await this.store.complete(message);
+        throw new Error("Invalid durable queue message was rejected without dispatch.");
+      }
+      if (!parsed || Object.keys(parsed).length !== 1 || !JOB_ID.test(parsed.jobId)) {
+        await this.store.audit("queue-rejected", { reason: "invalid-job-id" });
+        await this.store.complete(message);
+        throw new Error("Queue message escaped the fixed job-ID protocol.");
+      }
+      const saved = await this.store.read(`jobs/${parsed.jobId}`);
+      if (!saved) throw new Error("Queued job has no durable audit/state record; execution denied.");
+      const job = saved.value;
+      if (job.status !== "queued" || !Number.isInteger(message.dequeueCount) || message.dequeueCount !== 1) {
+        if (["queued", "running"].includes(job.status)) {
+          await this.store.write(`jobs/${job.id}`, {
+            ...job, status: "reconciliation-required",
+            error: "Delivery or execution may already have started. Automatic replay is forbidden.",
+          }, saved.etag);
+          await this.store.audit("replay-denied", { jobId: job.id });
+        }
+        await this.store.complete(message);
+        return false;
+      }
+      if (!OPERATIONS.includes(job.operation) || job.target !== this.config.names.appId || job.expiresAt !== this.config.expiry) {
+        throw new Error("Durable job does not match the immutable operation/target/lifetime boundary.");
+      }
+      const session = { hash: job.sessionHash, epoch: job.credentialEpoch };
+      const deadline = Math.min(this.now() + LIMITS.jobMs, this.config.expiresAt);
+      const guard = async () => {
+        assertLease();
+        if (this.now() >= deadline) throw new Error("The bounded job deadline has ended; no further request is permitted.");
+        await this.authorize(session);
+        if (this.now() >= deadline) throw new Error("The bounded job deadline has ended; no further request is permitted.");
+      };
+      let running;
+      try {
+        await guard();
+        running = { ...job, status: "running", startedAt: new Date(this.now()).toISOString() };
+        await this.store.audit("execution-starting", { jobId: job.id, operation: job.operation });
+        await this.store.write(`jobs/${job.id}`, running, saved.etag);
+        const azure = this.azureFactory(guard);
+        let requestCount = 0;
+        const guardedFetch = async (url, options) => {
+          await guard();
+          requestCount += 1;
+          if (requestCount > 20) throw new Error("The fixed lab HTTP request budget was exceeded.");
+          const parsed = new URL(url);
+          await this.store.audit("http-intent", {
+            jobId: job.id, index: requestCount, host: parsed.hostname, path: parsed.pathname,
+            runId: parsed.searchParams.get("runId"),
+          });
+          await guard();
+          const response = await this.fetchImpl(url, {
+            ...options, signal: AbortSignal.any([options.signal, AbortSignal.timeout(Math.max(1, deadline - this.now()))]),
+          });
+          await this.store.audit("http-observed", { jobId: job.id, index: requestCount, status: response.status });
+          return response;
+        };
+        let result;
+        if (job.operation === "collect-evidence") {
+          assertOwnedGroup(await azure.az(["group", "show", "--name", this.config.names.group]), this.config.invocation);
+          const source = JOB_ID.test(job.sourceJobId) ? await this.store.read(`jobs/${job.sourceJobId}`) : undefined;
+          if (!source || source.value.target !== this.config.names.appId || source.value.operation !== "simulate"
+              || !UUID.test(source.value.result?.runId)) throw new Error("Evidence refresh lost its original guarded simulator result.");
+          result = source.value.result;
+        } else {
+          result = await this.run({ ...this.config.invocation, command: job.operation === "investigate" ? "validate" : job.operation, yes: true }, {
+            az: azure.az, fetchImpl: guardedFetch,
+            log: (messageText) => this.log(`operator job ${job.id}: ${redact(messageText)}`),
+          });
+          if (job.operation === "investigate") result = {
+            validation: result,
+            assessments: (await azure.graph(investigationQuery(this.config.invocation))).data,
+            note: "Actual matching posture only; the full optional hunting guide remains in the operator CLI documentation.",
+          };
+        }
+        let evidence;
+        if (["simulate", "collect-evidence"].includes(job.operation)) {
+          if (!UUID.test(result?.runId)) throw new Error("Simulator returned no real run identity.");
+          evidence = await captureEvidence(this.config, result, azure, this.log);
+          await this.store.write(`evidence/${job.id}`, evidence);
+        }
+        await guard();
+        const latest = await this.store.read(`jobs/${job.id}`);
+        const completeEvidence = !evidence || Object.values(evidence.captures).every((source) => source.status === "queried");
+        const ingested = !evidence || (evidence.captures.application.status === "queried"
+          && new Set(evidence.captures.application.rows.map((row) => row.Signal)).size === 5);
+        const finished = {
+          ...running, status: completeEvidence && ingested ? "completed" : "completed-with-evidence-gaps",
+          finishedAt: new Date(this.now()).toISOString(),
+          result, ...(evidence ? { evidenceKey: `evidence/${job.id}`, runId: result.runId } : {}),
+        };
+        await this.store.audit("execution-completed", { jobId: job.id, operation: job.operation });
+        await this.store.write(`jobs/${job.id}`, finished, latest.etag);
+      } catch (error) {
+        const latest = await this.store.read(`jobs/${job.id}`);
+        await this.store.audit("execution-failed", { jobId: job.id, reason: redact(error.message) });
+        await this.store.write(`jobs/${job.id}`, {
+          ...latest.value, status: "failed", finishedAt: new Date(this.now()).toISOString(),
+          error: redact(error.message),
+        }, latest.etag);
+        this.log(`ERROR: operator job ${job.id} failed: ${redact(error.message)}`);
+      }
+      await this.store.complete(message);
+      return true;
+    });
+  }
+}
+
+export const newRequestId = () => randomUUID();

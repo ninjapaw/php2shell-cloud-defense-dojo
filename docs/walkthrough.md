@@ -4,13 +4,42 @@
 
 Use this alongside the public site's **Walkthrough** page at `/walkthrough.php`.
 The site is a read-only presentation: it does not run requests, enable products,
-query Azure plans, or create alerts. It reports only its own training/fixed app
-state. All operator commands below require your separately authorized terminal.
+query Azure plans, or create alerts. Current status is limited to its own
+training/fixed app state; the clearly dated recording is historical, not a live
+plan or alert badge. All operator commands below require your separately
+authorized terminal or the isolated [operator console](../operator/README.md).
 
 The structure follows Pawton's briefing -> chapters -> with/without comparison
 -> debrief pattern. The evidence contract is different: this public PHP lab
 does **not** exercise a vulnerability or promise real workload-detector alerts.
 Do not turn a simulated process, connection, or canary event into an attack claim.
+
+## Recorded live walkthrough
+
+The public chapters now show the actual redacted application record for **each
+of the five moves**, with the actual WAF match beside the first move. The
+[reviewed snapshot](../operator/public-evidence/92ad189c-9a88-4403-b773-52453963e4b8.json)
+is the source of truth; tests cross-check the rendered timestamps, fields and
+outcomes against it. The complete public recording is linked from the guide at
+`/evidence/92ad189c-9a88-4403-b773-52453963e4b8`.
+
+- Run: `92ad189c-9a88-4403-b773-52453963e4b8`.
+- Requests: **2026-10-24 16:33:41.463–16:33:43.454 UTC**.
+- Collection: **2026-10-24 16:36:07.232 UTC**.
+- Measured: five HTTP **200** responses, five ingested **synthetic** application
+  records, and the actual `DojoBenignMarker` WAF match. `Block` with `detection`
+  mode and HTTP 200 is **not enforced blocking**.
+- Defender: AppServices, CloudPosture and Containers were observed **Standard**.
+  Four existing posture assessments were **Healthy**; these are not alerts or
+  necessarily paid-CSPM-exclusive benefits. The exact-app/time-window provider
+  workload-alert query succeeded and returned **no records**.
+
+This is **not a Defender-disabled experiment**. The side-by-side view compares
+source logs available independently of Defender with the actual observations
+under the existing enabled plans. Conditional detection references remain
+explicitly separate from the recorded results. No shell, real outbound
+connection, secret access or compromise occurred, and no missing alert is
+replaced with a demonstration alert.
 
 ## 0. Mission briefing
 
@@ -64,9 +93,9 @@ the additional detection context a supported Defender plan could provide,
 and the control that breaks the chain. Unlike Pawton's bounded SQL tests,
 these PHP chapters do not execute the attack or promise detector triggers.
 
-**Ghostpaw is fictional.** The sequence is narrative order, not observed
-timestamps or an ingestion/detection timetable. The example UUID is a fixed
-illustration, not a run ID to use when investigating the actual simulator.
+**Ghostpaw is fictional.** The sequence is narrative order, not an ingestion or
+detection timetable. The recorded rows carry actual UTC timestamps; a new
+simulator run has its own UUID and must not be confused with this recording.
 
 | Move | Attacker's intent | What this replay actually does | Conditional Defender reference |
 | --- | --- | --- | --- |
@@ -87,10 +116,11 @@ screenshots or records returned by Defender.
 
 1. Read Ghostpaw's intent. Explain that it is the proposed attack, not a claim
    that this application performed it.
-2. Expand **Illustrative synthetic log excerpt**. The shown fields match the
-   public fixture contract: `synthetic: true`, the selected `signal`, the example
-   `runId`, and `evidenceKind: synthetic-application-log`. Actual responses add
-   time/resource context; console records use the `DOJO_EVENT` prefix.
+2. Read **Actual ingested log from the recorded run**. Each redacted row shows
+   the actual UTC, signal, `Synthetic: true`, and
+   `EvidenceKind: synthetic-application-log`. These are source-query
+   projections of ingested `DOJO_EVENT` fixtures, not full raw console lines
+   or illustrations. The run ID and collection window appear above the moves.
 3. Compare **Without workload Defender / raw clues** with **With supported
    Defender / conditional result**. WAF and logs remain useful without optional
    plans. A supported workload detector adds its own investigation context only
@@ -228,6 +258,32 @@ health checks/retries can add unrelated records.
 
 **Presenter line:** "A real log about a simulated process is still a simulated
 process. We have not run the behavior the message describes."
+
+### Running through the authenticated operator console
+
+Use the separately deployed [operator console](../operator/README.md) when a
+credentialed, auditable interface is required. Its deployment outputs the operator
+URL; the public PHP application does not receive privileged routes or Azure grants.
+Retrieve the generated credentials through an authorized private-network Key
+Vault client, not from a public page or deployment log.
+
+Start **GhostPaw: five harmless moves**. The console persists intent, validates
+the exact lab and original lifetime, then reuses the guarded simulator. Keep the
+resulting run ID, UTC window and individual HTTP outcomes. Refreshing the status
+page does not replay requests. **Collect current logs** re-queries that persisted
+run when ingestion lags, without generating another attack-shaped fixture.
+
+Raw evidence is private. A public capture is a separately reviewed, field-allowlisted
+snapshot with its own capture time and source availability. Match the five request
+signals to actual ingested application records; show the WAF policy mode beside
+the recorded action and observed HTTP outcome. Duplicate WAF rows are not multiple
+incidents. Show actual Defender plan/assessment/alert observations separately.
+
+Do not call this a Defender-off experiment when plans were enabled. The left-hand
+baseline is actual app/WAF evidence available independently of Defender; the
+Defender side contains only additional observed records, or an explicit
+not-observed/unavailable result. Four Healthy posture recommendations are not
+four attack detections, and an error-channel synthetic event is not compromise.
 
 ## 3. Build the evidence timeline
 
