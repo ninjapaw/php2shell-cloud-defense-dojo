@@ -85,7 +85,7 @@ test("cloud context contains only reviewed current deployment sources, never cre
   assert.ok(!decoded.files["detections/catalog.json"]);
   assert.ok(decoded.files["app/walkthrough.php"].includes("PHP to Proof | Guided Walkthrough"));
   assert.ok(bundle.sourceBundle.chunks.every((chunk) => chunk.length <= 8000));
-  assert.ok(bundle.sourceBundle.chunks.join("").length <= 60 * 1024);
+  assert.ok(bundle.sourceBundle.chunks.join("").length + Buffer.byteLength(JSON.stringify([])) <= 60 * 1024);
   assert.ok(Buffer.from(bundle.sourceBundle.chunks.join(""), "base64").equals(bundle.content));
 });
 

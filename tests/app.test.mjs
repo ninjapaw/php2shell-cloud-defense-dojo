@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { ROOT } from "../scripts/dojo.mjs";
-import { SCENARIO } from "../scripts/lib/config.mjs";
+import { SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../scripts/lib/config.mjs";
 
 const RUN_ID = "44444444-4444-4444-8444-444444444444";
 
@@ -109,6 +109,35 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
       assert.equal(rejected.status, 400);
       assert.match((await rejected.json()).error, /accepts no training inputs/);
     }
+  });
+  await t.test("attack story pairs all five moves with honest log excerpts and conditional alert references", async () => {
+    const html = await (await fetch(`${app.base}/walkthrough.php`)).text();
+    assert.match(html, /The request that wanted a shell/);
+    assert.match(html, /Ghostpaw is fictional/);
+    assert.match(html, /aria-label="Fictional attack chain"/);
+    assert.match(html, /WITHOUT WORKLOAD DEFENDER \/ RAW CLUES/);
+    assert.match(html, /WITH SUPPORTED DEFENDER \/ CONDITIONAL RESULT/);
+    assert.equal((html.match(/DETECTION REFERENCE \/ NOT OBSERVED/g) ?? []).length, 5);
+    assert.match(html, /Story order is not a detection or ingestion timetable/);
+    assert.match(html, /Category reference, not a fired alert/);
+    assert.match(html, /No guaranteed data-access alert/);
+    assert.match(html, /alerts-azure-app-service/);
+    assert.match(html, /id="alerts"/);
+    assert.match(html, /CONFIGURED RULE \/ NOT AN OBSERVED ALERT/);
+    assert.ok(html.includes(SENTINEL_RULE_DISPLAY_NAME));
+    assert.match(html, /Severity: Informational/);
+    assert.match(html, /Incident creation: disabled/);
+    const signals = ["request", "php-error", "process-synthetic", "outbound-synthetic", "canary"];
+    const examples = [...html.matchAll(/<pre data-example-signal="([^"]+)"><code>([\s\S]*?)<\/code><\/pre>/g)];
+    assert.deepEqual(examples.map((match) => match[1]), signals);
+    for (const [, signal, encoded] of examples) {
+      assert.ok(html.includes(`id="move-${signal}"`), signal);
+      assert.deepEqual(JSON.parse(encoded.replaceAll("&quot;", '"')), {
+        synthetic: true, signal, runId: RUN_ID, evidenceKind: "synthetic-application-log",
+      });
+    }
+    assert.doesNotMatch(html, /href="[^"]*[?&]signal=|<script\b|<form\b|<iframe\b/i);
+    assert.ok(!app.logs().includes("DOJO_EVENT "), "Viewing attack examples must not generate any signals.");
   });
   await t.test("all five signals return labelled fixtures and structured log events", async () => {
     for (const signal of ["request", "php-error", "process-synthetic", "outbound-synthetic", "canary"]) {

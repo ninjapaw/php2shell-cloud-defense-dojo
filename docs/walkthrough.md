@@ -56,6 +56,67 @@ access, unexpected runtime grants, or unexplained blocking. Never weaken
 restrictions, add broad permissions, or disable shared plans to force the demo.
 There is no guaranteed completion time for discovery, logs, or detections.
 
+## Present the attack: five moves, two investigation views
+
+The public walkthrough now tells **The request that wanted a shell**. Like
+Pawton, it pairs a fictional attacker's move with the analyst's raw clues,
+the additional detection context a supported Defender plan could provide,
+and the control that breaks the chain. Unlike Pawton's bounded SQL tests,
+these PHP chapters do not execute the attack or promise detector triggers.
+
+**Ghostpaw is fictional.** The sequence is narrative order, not observed
+timestamps or an ingestion/detection timetable. The example UUID is a fixed
+illustration, not a run ID to use when investigating the actual simulator.
+
+| Move | Attacker's intent | What this replay actually does | Conditional Defender reference |
+| --- | --- | --- | --- |
+| `request` | Find an exposed PHP entry point | Benign request; real WAF evaluation and labelled app fixture | Injection attempts: supported cloud-native request-pattern detection, not a CVE signature |
+| `php-error` | Turn parsing input into execution | Logs a simulated error; no crash or exploitation | Remote code execution: investigate real suspicious request patterns, not a fixture string |
+| `process-synthetic` | Start a child process or shell | Logs a process-shaped fixture; no process starts | Web shell activity: supported runtime detection needs real relevant activity |
+| `outbound-synthetic` | Contact an external destination | Logs a connection-shaped fixture; no egress occurs | Compromise indicators: no promise of a network alert from this replay |
+| `canary` | Reach valuable data or credentials | Returns three fabricated in-code records | No guaranteed data-access/canary detector; no real sensitive-data relationship is created |
+
+The first four labels are **categories**, based on Microsoft's current
+[App Service alert reference](https://learn.microsoft.com/azure/defender-for-cloud/alerts-azure-app-service).
+They are not asserted exact alert titles, detector IDs, severity values, or
+coverage for a particular Linux workload or CVE. Verify current platform and
+detector support. The reference cards are educational summaries, not product
+screenshots or records returned by Defender.
+
+### Show the evidence, then the queue
+
+1. Read Ghostpaw's intent. Explain that it is the proposed attack, not a claim
+   that this application performed it.
+2. Expand **Illustrative synthetic log excerpt**. The shown fields match the
+   public fixture contract: `synthetic: true`, the selected `signal`, the example
+   `runId`, and `evidenceKind: synthetic-application-log`. Actual responses add
+   time/resource context; console records use the `DOJO_EVENT` prefix.
+3. Compare **Without workload Defender / raw clues** with **With supported
+   Defender / conditional result**. WAF and logs remain useful without optional
+   plans. A supported workload detector adds its own investigation context only
+   when it observes relevant real activity; reading the guide does nothing.
+4. Read **Break the chain**. Distinguish prevention, patching, least privilege,
+   and verified removal from alerting or simply closing an alert.
+5. Use the public **Alerts and expected results** matrix. An empty queue is a
+   legitimate result, not a reason to present a reference card as a live alert.
+
+### What should appear with each profile?
+
+| Profile | Expected from this safe replay | Not established |
+| --- | --- | --- |
+| Base lab, no optional Defender/Sentinel | Delivered WAF records and synthetic app logs; manual KQL | A native Defender alert, scheduled Sentinel alert, or incident |
+| Paid Defender CSPM | Actual supported posture/graph results if available | Shell/process detections, a guaranteed CVE assessment, or an attack path |
+| Defender for App Service | Same harmless replay; any real supported detection needs independent evidence | A promised alert from the process, outbound, or canary fixture |
+| Sentinel only | Disabled Informational rule configuration | Scheduled evaluation or incident creation |
+| Sentinel plus analytics | Possible Informational **synthetic** correlation alert when the query matches | A Defender detection or automatic incident |
+
+For a real alert, open **Defender for Cloud -> Security alerts**, filter the exact
+resource and UTC window, and retain only returned ID/title/severity/evidence/status.
+Keep assessments/recommendations separate. For the optional Sentinel rule, use
+its actual configuration and query/health results; the illustrated rule card is
+not proof of evaluation. Do not publish tenant alert data or screenshots without
+review and appropriate redaction.
+
 ## Component map: what changes with and without Defender?
 
 This is a capability comparison, **not a live plan report**. Check the correct
@@ -406,6 +467,8 @@ Product boundaries checked against current first-party documentation:
 - [Foundational and paid CSPM](https://learn.microsoft.com/azure/defender-for-cloud/concept-cloud-security-posture-management)
 - [CSPM Serverless protection and component requirements](https://learn.microsoft.com/azure/defender-for-cloud/serverless-protection)
 - [Defender for App Service and investigation diagnostics](https://learn.microsoft.com/azure/defender-for-cloud/defender-for-app-service-introduction)
+- [App Service detection categories and alert reference](https://learn.microsoft.com/azure/defender-for-cloud/alerts-azure-app-service)
+- [Sentinel scheduled analytics and incident settings](https://learn.microsoft.com/azure/sentinel/create-analytics-rules)
 - [Current Defender feature support](https://learn.microsoft.com/azure/defender-for-cloud/support-matrix-defender-for-cloud)
 - [Defender for Containers support](https://learn.microsoft.com/azure/defender-for-cloud/support-matrix-defender-for-containers)
 - [Front Door origin security](https://learn.microsoft.com/azure/frontdoor/origin-security)

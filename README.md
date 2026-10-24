@@ -41,6 +41,14 @@ outbound, error, and canary signals are synthetic. The guide does not promise
 Defender alerts or show unqueried plan status as off. It is read-only, works
 without JavaScript, and never enables a plan or runs a simulation.
 
+The attack chapters follow fictional **Ghostpaw** through five moves: probe,
+PHP error, attempted shell, attempted outbound contact, and a fabricated ledger.
+Each pairs a synthetic log excerpt with a clearly labelled, conditional Defender
+detection reference and a control that breaks the chain. The alert-results matrix
+separates WAF logs, CSPM posture, workload detection, and optional Sentinel alerts.
+Reference cards are not observed alerts or screenshots; the public story never
+executes the attack.
+
 ## Learning objectives and evidence boundaries
 
 Discover a PHP asset, understand exposure, review available attack paths, observe
