@@ -242,17 +242,17 @@ $recordedRun = [
       <h2 id="protect-title">Make one deliberate prevention change</h2>
       <pre><code>bash scripts/dojo.sh protect --environment dev --yes
 bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
-      <p class="walkthrough-check"><strong>Prevention:</strong> marker 403, four other signals 200. The marker never reaches PHP; normal traffic must work, origin stays 403.</p>
-      <p>WAF, not Defender, causes the block. The custom marker is not managed-rule CVE coverage.</p>
+      <p class="walkthrough-check"><strong>Prevention:</strong> marker 403, four other signals 200. Normal traffic must work; origin stays403.</p>
+      <p><a href="/evidence/response">Official response and scripts</a>: stage three request rules in Log first. Response rule99006001 has no WAF hits/logs. WAF mitigation is not a PHP patch.</p>
     </section>
 
     <section id="remediate" class="walkthrough-chapter" aria-labelledby="remediate-title">
       <p class="number">07 / REDUCE, VERIFY, AND CLEAN UP</p>
-      <h2 id="remediate-title">Remove the training surface, not just the alert</h2>
+      <h2 id="remediate-title">Patch, remove, verify</h2>
       <pre><code>bash scripts/dojo.sh remediate --environment dev --yes
 bash scripts/dojo.sh validate --environment dev</code></pre>
-      <p>Fixed state: all five signals 404 <strong>without the WAF marker</strong>; marked 403 alone proves nothing. Homepage/health still work. <code>simulate</code> refuses fixed; repair preserves fixed/Prevention/expiry, not a verified CVE fix.</p>
-      <p>Findings need patch/assessment evidence. Teardown requires exact-owned-group confirmation; remove its CNAME before releasing the hostname. Review DNS/shared plans/private AKS separately.</p>
+      <p>Fixed: five signals404 <strong>without the WAF marker</strong>; health200, origin403. Repair preserves fixed/Prevention/expiry. Fixture removal is not a PHP patch.</p>
+      <p><a href="/evidence/response#response-closure">Resolution script and closure checks</a>: verify running PHP8.4.27+, rebuild images, inspect findings. Approved window required; no after-state is claimed.</p>
     </section>
 
     <section id="containers" class="walkthrough-chapter" aria-labelledby="containers-title">

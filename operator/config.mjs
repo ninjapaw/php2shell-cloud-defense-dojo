@@ -16,6 +16,7 @@ export const CATALOGUE = Object.freeze([
   { id: "domain-check", title: "Check the existing custom domain", enabled: true },
   { id: "collect-evidence", title: "Refresh evidence for a persisted run", enabled: true, contextRequired: true },
   { id: "hunt-pack", title: "Reviewed read-only hunting pack", enabled: true, contextRequired: true },
+  { id: "response", title: "Official-guidance response scripts and guarded actions", enabled: true, contextRequired: true },
   { id: "defender-validation", title: "Microsoft App Service validation marker", enabled: false,
     reason: "Deferred: registration eligibility and a four-hour observation window must be verified before this test can be authorized." },
   ...["protect", "remediate", "deploy", "repair", "uninstall", "domain", "container-test"].map((id) => ({
@@ -53,6 +54,9 @@ export function loadConfig(environment = process.env) {
   const expiry = required("OPERATOR_EXPIRES_AT", /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
   const expiresAt = Date.parse(expiry);
   if (!Number.isFinite(expiresAt) || new Date(expiresAt).toISOString() !== expiry) throw new Error("Invalid operator expiry.");
+  if (environment.OPERATOR_RESPONSE_WRITES !== undefined && !["true", "false"].includes(environment.OPERATOR_RESPONSE_WRITES)) {
+    throw new Error("OPERATOR_RESPONSE_WRITES must be an explicit lowercase boolean.");
+  }
   const lab = parseConfigJson(readFileSync(new URL("../config/dev.json", import.meta.url), "utf8"));
   const invocation = parseInvocation(["validate", "--subscription", subscription, "--suffix", suffix], lab, {});
   const workspaceId = required("OPERATOR_WORKSPACE_ID", UUID);
@@ -61,6 +65,7 @@ export function loadConfig(environment = process.env) {
   return Object.freeze({
     invocation, tenantId, origin, frontDoorId, storageAccount, vaultName, workspaceId,
     expiresAt, expiry, port: Number(portText), names: names(invocation),
+    responseWritesEnabled: environment.OPERATOR_RESPONSE_WRITES === "true",
     verifierSecret: "operator-admin-verifier",
     blobContainer: "operator-private", queueName: "operator-jobs",
   });

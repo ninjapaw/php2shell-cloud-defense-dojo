@@ -37,6 +37,13 @@ if source["kind"] == "release":
                           "operator/control.mjs", "operator/azure.mjs", "operator/server.mjs"])
 elif source["kind"] == "module":
     allowed = {"operator/hunts.mjs"}
+elif source["kind"] == "response-maintenance":
+    allowed = {"scripts/lib/response.mjs", "scripts/response.mjs", "operator/response.mjs",
+               "operator/config.mjs", "operator/control.mjs", "operator/server.mjs",
+               "operator/public-scripts/response.mjs"}
+    script = files.get("operator/public-scripts/response.mjs")
+    if not isinstance(script, str) or len(script) > 262144 or "responseCli" not in script:
+        raise ValueError("Reviewed response script bundle rejected.")
 elif source["kind"] == "recording":
     allowed = {"operator/public-evidence/hunting.json"}
     snapshot = json.loads(files["operator/public-evidence/hunting.json"])
@@ -73,7 +80,7 @@ report = {"$schema": "https://schema.management.azure.com/schemas/2019-04-01/dep
           "outputs": {"result": {"type": "object", "value": {
               "status": "files-deployed", "kind": kind, "sourceSha256": os.environ["SOURCE_SHA256"],
               "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-              "note": "Bounded hunting overlay only. Live query, authentication, evidence and UI verification are separate."
+              "note": "Bounded operator overlay only. Live queries, authentication, response execution, evidence and UI verification are separate."
           }}}}
 (root / "report.json").write_text(json.dumps(report))
 PY

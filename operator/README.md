@@ -69,7 +69,25 @@ or public execution bypass. Disable the setting after collecting the candidate;
 manual review and a separate static publication are still mandatory.
 
 `protect`, `remediate`, deployment/repair, DNS writes, teardown, container execution
-and security-plan changes are visibly unavailable. The console must not disable
+and security-plan changes remain unavailable as generic lifecycle commands.
+The separate [official-response workflow](../docs/response.md) exposes reviewed
+scripts and fixed, independently approved response actions at `/response`.
+`OPERATOR_RESPONSE_WRITES` defaults off; source installation does not add write
+grants or renew the lab. An administrator must separately authorize the window,
+feature opt-in and exact WAF/app-settings/tag permissions before mutation controls
+can run. Public PHP identity grants remain zero. No generic lifecycle deploy,
+command, target, package upgrade or DRS installation is exposed.
+
+The `/evidence/response` public guide and `/evidence/response/script` download
+are read-only. The bundled script includes the shared ownership/expiry guards,
+requires already authorized Azure CLI access, and consumes a private preview file
+once per selected action. Run the first preview command, inspect its JSON, then
+independently approve the mutation; do not blindly pipe the examples together.
+Neither script nor UI equates fixture removal with a PHP security update.
+Failed/uncertain writes stop as `reconciliation-required`, never auto-replay or
+restore exposure. Consult the response guide before manually reconciling.
+
+The console must not disable
 Defender, reopen a fixed lab, weaken WAF or turn an intentionally harmless public
 site into an RCE workload.
 

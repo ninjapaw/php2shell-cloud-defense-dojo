@@ -378,6 +378,13 @@ Do not invent an alert, incident, or completion time for the narrative.
 
 ## 6. Prove WAF Prevention
 
+Continue into the [official PHP2Shell response workflow](response.md) for the
+downloadable/portal scripts, three independently staged Log-to-Block request
+policies, response rule99006001 availability and its deliberately absent logs,
+and actual PHP patch verification. The linked Microsoft guidance is the source;
+the harmless marker below is not a CVE signature. The response controls default
+off and do not renew an expired window or grant IAM permissions.
+
 Before changing mode, review legitimate traffic, the actual custom-rule match,
 and origin isolation. Then explicitly run:
 
@@ -404,6 +411,13 @@ Managed-rule CVE coverage requires independent vendor mapping and authorized
 evidence; no exploit payload is supplied.
 
 ## 7. Remove training surfaces and verify closure
+
+**Fixture closure is not PHP remediation.** Microsoft's reviewed baselines are
+8.2.35, 8.3.36, 8.4.27 and 8.5.12. A managed App Service branch setting is not a
+full patch version; verify the running runtime and actual asset findings.
+The [resolution/verification scripts](response.md#5-resolve-the-runtime-and-close-the-training-surface)
+keep those results separate and return incomplete status when PHP still needs
+updating. Request mitigation and response sanitization never replace patching.
 
 ```bash
 bash scripts/dojo.sh remediate --environment dev --yes

@@ -57,8 +57,18 @@ executes the attack.
 The separate [operator console](operator/README.md) uses Key Vault-backed admin
 credentials, durable private audit/queue/session storage and the existing guarded
 simulator. Its identity is separate from the unprivileged public PHP app. Only
-bounded harmless/read-only actions are available; no arbitrary commands, Defender
-toggles, destructive actions or automatic public publication are exposed.
+bounded harmless/read-only actions are enabled by default; no arbitrary commands,
+Defender toggles, teardown or automatic public publication are exposed.
+
+The [official-response workflow](docs/response.md) completes GhostPaw's route:
+detection, independent request-rule review, Prevention, response rule availability,
+PHP patching, fixture closure and measured verification. The response overlay adds
+`/response`, the public `/evidence/response` walkthrough, and a readable downloadable
+Node.js script. Fixed mutation controls require an explicit feature opt-in,
+fresh session-bound previews, exact confirmation, an active approved window and
+separately authorized narrow permissions. They default off; installing code
+does not grant permissions or extend the expired lab. Older deployments need the
+response overlay before these routes are available.
 
 Actual captures keep HTTP outcomes, UTC/run IDs, real WAF records, explicitly
 synthetic app events, actual posture and independently observed workload alerts

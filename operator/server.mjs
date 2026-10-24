@@ -24,7 +24,7 @@ const cookie = (request) => {
   return matches.length === 1 ? matches[0].slice(COOKIE.length + 1) : undefined;
 };
 const hidden = (key, value) => `<input type="hidden" name="${key}" value="${escape(value)}">`;
-const layout = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>${escape(title)} | PHP to Proof</title></head><body><header><a href="/">PHP to Proof / Operator</a><span>PRIVATE CONTROL PLANE</span></header><main><h1>${escape(title)}</h1>${body}</main><footer>Authorized harmless training only. No arbitrary commands or Defender downgrades.</footer></body></html>`;
+const layout = (title, body, publicPage) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>${escape(title)} | PHP to Proof</title></head><body><header><a href="/">PHP to Proof / Operator</a><span>${publicPage ? "PUBLIC READ-ONLY" : "PRIVATE CONTROL PLANE"}</span></header><main><h1>${escape(title)}</h1>${body}</main><footer>Authorized defensive training only. No arbitrary commands or Defender downgrades.</footer></body></html>`;
 
 async function form(request) {
   if (request.headers["content-type"]?.split(";")[0] !== "application/x-www-form-urlencoded") throw new OperatorError(415, "content-type", "Expected an encoded HTML form.");
@@ -48,9 +48,9 @@ export function createOperatorServer(config, { store, auth, control, log = conso
       "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin",
       "Strict-Transport-Security": "max-age=31536000",
     };
-    const send = (status, title, body, extra = {}) => {
+    const send = (status, title, body, extra = {}, publicPage = false) => {
       response.writeHead(status, { ...headers, ...extra });
-      response.end(layout(title, body));
+      response.end(layout(title, body, publicPage));
     };
     try {
       if (request.headers["x-azure-fdid"] !== config.frontDoorId) throw new OperatorError(403, "edge-required", "The verified operator edge is required.");
@@ -68,6 +68,16 @@ export function createOperatorServer(config, { store, auth, control, log = conso
         const css = await readFile(new URL("./style.css", import.meta.url), "utf8");
         response.writeHead(200, { ...headers, "Content-Type": "text/css; charset=utf-8" });
         response.end(css);
+        return;
+      }
+      if (request.method === "GET" && ["/evidence/response", "/evidence/response/script"].includes(url.pathname)) {
+        const guide = await import("./response.mjs");
+        if (url.pathname.endsWith("/script")) {
+          const source = await guide.responseDownload();
+          response.writeHead(200, { ...headers, "Content-Type": "text/javascript; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="php2proof-response.mjs"' });
+          response.end(source);
+        } else send(200, "GhostPaw: detection, prevention, resolution and proof", guide.publicResponsePage(), {}, true);
         return;
       }
       if (request.method === "GET" && (url.pathname === "/evidence/hunting" || /^\/evidence\/[0-9a-f-]{36}$/.test(url.pathname))) {
@@ -124,8 +134,11 @@ export function createOperatorServer(config, { store, auth, control, log = conso
           return;
         }
         if (url.pathname === "/jobs") {
-          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId", "huntId"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
-          const job = await control.start(session, input.operation, input.idempotencyKey, input.sourceJobId, input.huntId);
+          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId", "huntId", "responseId", "responsePlanJobId", "responseFingerprint", "responseConfirmation"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
+          const approval = Object.fromEntries([["id", input.responseId], ["planJobId", input.responsePlanJobId],
+            ["fingerprint", input.responseFingerprint], ["confirmation", input.responseConfirmation]].filter(([, value]) => value !== undefined));
+          const job = await control.start(session, input.operation, input.idempotencyKey, input.sourceJobId, input.huntId,
+            Object.keys(approval).length ? approval : undefined);
           response.writeHead(303, { ...headers, Location: `/jobs/${job.id}` });
           response.end();
           return;
@@ -134,13 +147,17 @@ export function createOperatorServer(config, { store, auth, control, log = conso
       }
       if (request.method !== "GET") throw new OperatorError(405, "method", "Only authenticated fixed HTML actions are supported.");
       const session = await auth.session(cookie(request));
+      if (url.pathname === "/response") {
+        send(200, "GhostPaw response scripts and approvals", await (await import("./response.mjs")).privateResponsePage(config, store, session));
+        return;
+      }
       if (url.pathname === "/hunts") {
         send(200, "PHP2Shell hunting scenarios", await (await import("./hunts.mjs")).huntingPage(config, store, session));
         return;
       }
       if (url.pathname === "/") {
         const jobs = await store.recentJobs();
-        send(200, "GhostPaw test console", `<p><a href="/hunts">Hunting pack: scenarios, queries, actual results and additional value</a></p><p>Exact lab: ${escape(config.names.group)}. Original expiry: ${escape(config.expiry)}. Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled
+        send(200, "GhostPaw test console", `<p><a href="/response">Official-response scripts: detection to prevention, resolution and validation</a> / <a href="/hunts">Hunting pack: scenarios, queries, actual results and additional value</a></p><p>Exact lab: ${escape(config.names.group)}. Original expiry: ${escape(config.expiry)}. Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled
           ? `<form action="/jobs" method="post">${hidden("csrf", session.csrf)}${hidden("operation", item.id)}${hidden("idempotencyKey", newRequestId())}<button>${escape(item.title)}</button></form>`
           : `<p><strong>${escape(item.title)}</strong>: disabled. ${escape(item.reason)}</p>`).join("")}<h2>Private run history</h2><ul>${jobs.map((job) => `<li><a href="/jobs/${escape(job.id)}">${escape(job.queuedAt)} / ${escape(job.operation)} / ${escape(job.status)}</a></li>`).join("")}</ul><form action="/logout" method="post">${hidden("csrf", session.csrf)}<button>Sign out</button></form>`);
         return;

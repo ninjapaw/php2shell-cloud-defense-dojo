@@ -9,6 +9,7 @@ param frontDoorId string
 param workspaceId string
 param credentialsReady bool
 param initializeId string = ''
+param responseWritesEnabled bool = false
 param tags object
 
 var storageName = 'p2pops${suffix}${take(uniqueString(subscription().id, resourceGroup().name), 5)}'
@@ -150,6 +151,7 @@ resource appsettings 'Microsoft.Web/sites/config@2025-03-01' = {
     OPERATOR_STORAGE_ACCOUNT: storageName
     OPERATOR_VAULT_NAME: vaultName
     OPERATOR_EXPIRES_AT: expiresAt
+    OPERATOR_RESPONSE_WRITES: responseWritesEnabled ? 'true' : 'false'
     OPERATOR_WORKSPACE_ID: workspaceId
     SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
     OPERATOR_INITIALIZE: string(!empty(initializeId))

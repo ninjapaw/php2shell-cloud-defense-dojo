@@ -24,6 +24,14 @@ test("HTTP boundary requires the edge, login, exact Origin and CSRF; no anonymou
   const publicHunts = await fetch(`${base}/evidence/hunting`, { headers: edge });
   assert.equal(publicHunts.status, 200);
   assert.match(await publicHunts.text(), /HISTORICAL REVIEWED CAPTURE/);
+  const publicResponse = await fetch(`${base}/evidence/response`, { headers: edge });
+  const responseGuide = await publicResponse.text();
+  assert.equal(publicResponse.status, 200);
+  assert.match(responseGuide, /PUBLIC READ-ONLY/);
+  assert.match(responseGuide, /Upgrading PHP is the complete vulnerability remediation/);
+  assert.match(responseGuide, /99006001/);
+  assert.doesNotMatch(responseGuide, /<form\b/);
+  assert.equal((await fetch(`${base}/response`, { headers: edge })).status, 401);
   const stylesheet = await fetch(`${base}/style.css`, { headers: edge });
   assert.equal(stylesheet.status, 200);
   assert.match(stylesheet.headers.get("content-type"), /^text\/css/);
@@ -56,12 +64,22 @@ test("HTTP boundary requires the edge, login, exact Origin and CSRF; no anonymou
   assert.equal((huntsHtml.match(/id="hunt-/g) ?? []).length, 27);
   assert.match(huntsHtml, /20 value\/evaluation walkthroughs/);
   assert.match(huntsHtml, /name="huntId" value="all"/);
+  const responseConsole = await fetch(`${base}/response`, { headers: { ...edge, Cookie: sessionCookie } });
+  const responseConsoleHtml = await responseConsole.text();
+  assert.equal(responseConsole.status, 200);
+  assert.match(responseConsoleHtml, /OFF; no live IAM\/mitigation authorization was assumed/);
+  assert.match(responseConsoleHtml, /name="responseId" value="plan"/);
+  assert.match(responseConsoleHtml, /button disabled/);
   const csrf = /name="csrf" value="([^"]+)"/.exec(dashboard)[1];
   assert.equal((await post("/jobs", { csrf, operation: "hunt-pack", huntId: "lab-waf",
     idempotencyKey: "00000000-0000-4000-8000-000000000002", query: "arbitrary query" }, sessionCookie)).status, 400);
   assert.equal((await post("/jobs", { csrf: "wrong", operation: "simulate" }, sessionCookie)).status, 403);
   assert.equal((await post("/jobs", { csrf, operation: "simulate", idempotencyKey: "00000000-0000-4000-8000-000000000001", target: "https://other.invalid" }, sessionCookie)).status, 400);
   assert.equal((await post("/jobs", { csrf, operation: "remediate", idempotencyKey: "00000000-0000-4000-8000-000000000001" }, sessionCookie)).status, 400);
+  assert.equal((await post("/jobs", { csrf, operation: "response", responseId: "prevention",
+    idempotencyKey: "00000000-0000-4000-8000-000000000003" }, sessionCookie)).status, 403);
+  assert.equal((await post("/jobs", { csrf, operation: "response", responseId: "plan",
+    idempotencyKey: "00000000-0000-4000-8000-000000000003", script: "arbitrary script" }, sessionCookie)).status, 400);
   assert.equal(h.store.queue.length, 0);
   const sent = await post("/jobs", { csrf, operation: "validate", idempotencyKey: "00000000-0000-4000-8000-000000000001" }, sessionCookie);
   assert.equal(sent.status, 303);

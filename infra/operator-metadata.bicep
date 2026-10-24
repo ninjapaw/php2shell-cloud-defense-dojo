@@ -8,13 +8,14 @@ resource metadataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: guid(subscription().id, operatorGroupName, 'php2proof-operator-metadata')
   properties: {
     roleName: 'PHP to Proof operator metadata ${suffix}'
-    description: 'Subscription identity and Defender pricing observations only. No plan writes or workload writes.'
+    description: 'Subscription identity, Defender pricing and available Front Door managed-rule metadata only. No plan or workload writes.'
     type: 'CustomRole'
     assignableScopes: [subscription().id]
     permissions: [{
       actions: [
         'Microsoft.Resources/subscriptions/read'
         'Microsoft.Security/pricings/read'
+        'Microsoft.Network/frontDoorWebApplicationFirewallManagedRuleSets/read'
       ]
       notActions: []
       dataActions: []

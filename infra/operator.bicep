@@ -4,6 +4,8 @@ param suffix string
 param expiresAt string
 param credentialsReady bool = false
 param initializeId string = ''
+@description('Explicit response-write feature opt-in only. Does not renew expiry or grant write permissions.')
+param responseWritesEnabled bool = false
 param location string = loadJsonContent('../config/dev.json').location
 param mainGroupName string = loadJsonContent('../config/dev.json').resourceGroup
 param operatorGroupName string = loadJsonContent('../config/operator.dev.json').resourceGroup
@@ -45,6 +47,7 @@ module resources './operator-resources.bicep' = {
     workspaceId: endpoint.outputs.workspaceId
     credentialsReady: credentialsReady
     initializeId: initializeId
+    responseWritesEnabled: responseWritesEnabled
     tags: tags
   }
 }
