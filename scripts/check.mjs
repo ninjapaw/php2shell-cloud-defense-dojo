@@ -22,7 +22,7 @@ for (const file of files) {
     if (!fix) throw new Error(`CRLF source file: ${relative(ROOT, file)}. Run npm run lint -- --fix-line-endings.`);
     writeFileSync(file, text.replaceAll("\r\n", "\n"));
   }
-  if (file.endsWith(".mjs")) runTool(process.execPath, ["--check", file]);
+  if (/\.(?:mjs|cjs)$/.test(file)) runTool(process.execPath, ["--check", file]);
   if (file.endsWith(".php")) runTool("php", ["-l", file]);
   if (file.endsWith(".sh")) runTool("shellcheck", [file]);
   if (file.endsWith(".yml") || file.endsWith(".yaml")) {

@@ -41,7 +41,12 @@ change with a matching group name; do not silently upgrade the SKU or widen role
 
 ### Optional Azure-hosted deployment runner
 
-When Linux/WSL2 CLI access is unavailable, the reviewed
+The [local wizard](deployment.md) supports native Windows with the official
+MSI/ZIP Azure CLI layout, plus Linux/macOS. It never interpolates `az.cmd` through
+a shell; the helper is loaded only on Windows. Azure-hosted Linux source bundles
+need no Windows-only helper.
+
+When supported local CLI access is unavailable, the reviewed
 [runner stack](../infra/deploy-runner.bicep) can run the same guarded CLI in a
 digest-pinned, outbound-only Azure container. It is an explicit billable
 operator operation, not an application runtime or a bypass of doctor/what-if.

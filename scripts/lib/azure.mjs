@@ -1,12 +1,13 @@
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { redact, sameId } from "./safety.mjs";
 
 export function runTool(command, args, options = {}) {
-  if (process.platform === "win32" && command === "az") {
-    throw new Error("Azure lifecycle commands require Linux/macOS or WSL2 with Linux Node and Azure CLI. Native Windows supports offline plan/tests.");
+  if (process.platform === "win32") {
+    ({ command, args, options } = createRequire(import.meta.url)("./windows-tools.cjs").windowsTool(command, args, options));
   }
   const result = spawnSync(command, args, {
     encoding: "utf8", timeout: 1_800_000, maxBuffer: 4 * 1024 * 1024, shell: false,

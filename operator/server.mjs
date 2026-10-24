@@ -70,6 +70,20 @@ export function createOperatorServer(config, { store, auth, control, log = conso
         response.end(css);
         return;
       }
+      if (request.method === "GET" && ["/evidence/deploy", "/evidence/deploy/source.zip", "/evidence/deploy/source.sha256"].includes(url.pathname)) {
+        const deployment = await import("./deploy.mjs");
+        if (url.pathname.endsWith("/source.zip")) {
+          const zip = await deployment.deploymentDownload();
+          response.writeHead(200, { ...headers, "Content-Type": "application/zip",
+            "Content-Disposition": 'attachment; filename="php2proof-deploy.zip"' });
+          response.end(zip);
+        } else if (url.pathname.endsWith("/source.sha256")) {
+          const manifest = await deployment.deploymentManifest();
+          response.writeHead(200, { ...headers, "Content-Type": "text/plain; charset=utf-8" });
+          response.end(`${manifest.sha256}  php2proof-deploy.zip\n`);
+        } else send(200, "Deploy PHP to Proof to your Azure environment", await deployment.deploymentPage(), {}, true);
+        return;
+      }
       if (request.method === "GET" && ["/evidence/response", "/evidence/response/script"].includes(url.pathname)) {
         const guide = await import("./response.mjs");
         if (url.pathname.endsWith("/script")) {

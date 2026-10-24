@@ -37,6 +37,19 @@ if source["kind"] == "release":
                           "operator/control.mjs", "operator/azure.mjs", "operator/server.mjs"])
 elif source["kind"] == "module":
     allowed = {"operator/hunts.mjs"}
+elif source["kind"] == "deployment-guide-maintenance":
+    allowed = {"operator/deploy.mjs", "operator/server.mjs"}
+elif source["kind"] == "deployment-download-maintenance":
+    allowed = {"operator/public-deployment/manifest.json", "operator/public-deployment/source.zip.00.b64"}
+    manifest = json.loads(files["operator/public-deployment/manifest.json"])
+    if manifest.get("schemaVersion") != 1 or manifest.get("kind") != "core-wizard-source" or manifest.get("parts") != 2 or not 1000 <= manifest.get("bytes", 0) <= 262144 or not re.fullmatch(r"[a-f0-9]{64}", manifest.get("sha256", "")):
+        raise ValueError("Deployment download manifest rejected.")
+    base64.b64decode(files["operator/public-deployment/source.zip.00.b64"], validate=True)
+elif source["kind"] == "deployment-tail-maintenance":
+    allowed = {"operator/public-deployment/source.zip.01.b64"}
+    base64.b64decode(files["operator/public-deployment/source.zip.01.b64"], validate=True)
+elif source["kind"] == "public-navigation-maintenance":
+    allowed = {"app/index.php", "app/walkthrough.php", "app/assets/style.css"}
 elif source["kind"] == "public-walkthrough-maintenance":
     allowed = {"app/walkthrough.php"}
     page = files.get("app/walkthrough.php")
@@ -64,7 +77,7 @@ if source["kind"] == "release" and datetime.datetime.now(datetime.timezone.utc) 
 root = pathlib.Path(os.environ["HUNT_PUBLICATION_ROOT"])
 with zipfile.ZipFile(root / "hunting.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for name, value in files.items():
-        archive.writestr(name.removeprefix("app/") if source["kind"] == "public-walkthrough-maintenance" else name, value)
+        archive.writestr(name.removeprefix("app/") if source["kind"] in ("public-walkthrough-maintenance", "public-navigation-maintenance") else name, value)
 (root / "kind.txt").write_text(source["kind"])
 print(json.dumps({"verifiedSource": True, "kind": source["kind"], "files": len(files), "sha256": os.environ["SOURCE_SHA256"]}))
 PY
@@ -75,7 +88,7 @@ az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 kind="$(cat "${work}/kind.txt")"
 target_group="$OPERATOR_GROUP"
 target_app="p2p-${DOJO_SUFFIX}-operator"
-if [[ "$kind" == public-walkthrough-maintenance ]]; then
+if [[ "$kind" == public-walkthrough-maintenance || "$kind" == public-navigation-maintenance ]]; then
   target_group="$MAIN_GROUP"
   target_app="p2s-${DOJO_SUFFIX}-app"
   [[ "$(az webapp show --resource-group "$target_group" --name "$target_app" --query "tags.\"pawprint.expiresAt\"" --output tsv)" == "$ORIGINAL_EXPIRY" ]] || { echo 'Public application lifetime drifted.' >&2; exit 1; }

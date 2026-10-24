@@ -11,7 +11,8 @@ import { SCENARIO, SENTINEL_RULE_DISPLAY_NAME } from "../scripts/lib/config.mjs"
 
 const RUN_ID = "44444444-4444-4444-8444-444444444444";
 const GITHUB_LINK = '<a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a>';
-const RECORDED_LINK = 'href="/evidence/92ad189c-9a88-4403-b773-52453963e4b8"';
+const RECORDED_LINK = 'href="https://php2proof.ninjapaws.org/evidence/92ad189c-9a88-4403-b773-52453963e4b8"';
+const DEPLOY_LINK = 'href="https://php2proof.ninjapaws.org/evidence/deploy">Deploy to Azure</a>';
 
 async function startPhp(state, environment = "dev") {
   const server = createServer();
@@ -68,6 +69,7 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.match(html, /No assessment, runtime alert, or attack path is fabricated/);
     assert.match(html, /href="\/walkthrough\.php"/);
     assert.ok(html.includes(GITHUB_LINK), "Story navigation must link to the exact project repository.");
+    assert.ok(html.includes(DEPLOY_LINK), "Story top navigation must offer the actual deployment wizard guide.");
     assert.match(page.headers.get("content-security-policy"), /default-src 'none'/);
     assert.equal(page.headers.get("cache-control"), "no-store");
     assert.equal((await fetch(`${app.base}/assets/style.css`)).status, 200);
@@ -88,7 +90,9 @@ test("real PHP training app is read-only, bounded and labels all synthetic signa
     assert.doesNotMatch(html, /class="badge">DEV ONLY<\/span>/);
     assert.match(html, /Application state: training/);
     assert.ok(html.includes(GITHUB_LINK), "Walkthrough navigation must link to the exact project repository.");
+    assert.ok(html.includes(DEPLOY_LINK), "Walkthrough top navigation must offer the same deployment entry.");
     assert.ok(html.includes(RECORDED_LINK), "Walkthrough must link to the reviewed actual run, not only illustrative examples.");
+    assert.match(html, /not your new deployment's logs/);
     assert.match(html, /Defender and Sentinel status: not queried by this page/);
     assert.match(html, /Foundational CSPM/);
     assert.match(html, /Serverless protection/);

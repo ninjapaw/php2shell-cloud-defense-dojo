@@ -14,6 +14,7 @@ import { ControlPlane } from "../control.mjs";
 import { config, NOW, setup } from "./support.mjs";
 import { FDID } from "../../tests/support/harness.mjs";
 import { buildHuntingArtifact } from "../build-hunts.mjs";
+import { buildDeployment } from "../build-deploy.mjs";
 
 function fixture(cfg = config()) {
   const n = cfg.names;
@@ -379,6 +380,13 @@ test("actual embedded publisher permits closed response maintenance after expiry
     { encoding: "utf8", timeout: 10000 });
   assert.equal(listing.status, 0);
   assert.deepEqual(JSON.parse(listing.stdout), ["walkthrough.php"]);
+  const deployment = join(directory, "deployment");
+  const distribution = buildDeployment(deployment);
+  for (const overlay of distribution.overlays) {
+    const source = JSON.parse(gunzipSync(readFileSync(join(deployment, overlay.kind, "source.json.gz"))));
+    const checked = validate(source);
+    assert.equal(checked.status, 0, checked.stderr);
+  }
   const rejected = validate({ ...response, files: { ...response.files, "operator/auth.mjs": "not allowed" } });
   assert.notEqual(rejected.status, 0);
   assert.match(rejected.stderr, /file allowlist rejected/);

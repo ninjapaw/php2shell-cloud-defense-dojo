@@ -246,12 +246,23 @@ lab deployment. Start with `npm run container:lab -- plan --suffix your1234`.
 
 ## Prerequisites
 
+For the easiest customer deployment, use **Deploy to Azure** in the public
+navigation or the [guided deployment instructions](docs/deployment.md).
+Run `node scripts/wizard.mjs --check`, then `node scripts/wizard.mjs`.
+The prepared core distribution needs no Git/npm install; it uses your existing
+Azure CLI sign-in and saves a nonsecret run profile for install, repair and
+exact-group uninstall. The private administrator portal remains an advanced,
+separate deployment. No compiled desktop app or bundled Azure CLI is required.
+
+For development and the complete checkout:
+
 - Node.js 24.19+ within Node 24, npm, and Git.
 - PHP 8.4 or 8.5 and ShellCheck for local lint/application tests.
-- For Azure operations: Linux/macOS or **WSL2 with Linux Node**, Bash, `zip`,
-  Azure CLI, and Bicep 0.48.1 (`az bicep install --version v0.48.1`).
-- Native Windows supports the offline plan and Node/PHP tests. It deliberately
-  does not invoke `az.cmd` through a shell; use WSL2 for cloud operations.
+- For Azure operations: Azure CLI and Bicep0.48.1+; `zip` on Linux/macOS or the
+  built-in ZIP-capable `tar.exe` on current native Windows.
+- Native Windows uses the official MSI/ZIP CLI's installed Python module with
+  argument arrays, never `az.cmd` through a shell. Other CLI layouts fail clearly;
+  Cloud Shell/WSL2 are alternatives. See [guided deployment](docs/deployment.md).
 - An explicitly selected, enabled, authorized **AzureCloud** training subscription,
   supported Linux B1 region, registered providers, and reviewed deployment roles.
 - For assessment queries: explicitly install the Azure CLI `resource-graph`

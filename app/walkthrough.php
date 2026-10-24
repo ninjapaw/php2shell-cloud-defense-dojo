@@ -82,13 +82,13 @@ $recordedRun = [
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/">Story</a><a href="/walkthrough.php" aria-current="page">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a></nav><span class="badge">PUBLIC DEMO</span></header>
+  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/">Story</a><a href="/walkthrough.php" aria-current="page">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a><a class="badge" href="https://php2proof.ninjapaws.org/evidence/deploy">Deploy to Azure</a></nav><span class="badge">PUBLIC DEMO</span></header>
   <main id="main" class="walkthrough">
     <aside class="warning"><strong>TRAINING ONLY.</strong> A fictional attack story, not an exploit runner. Real WAF behavior; synthetic PHP signals. No shell, real outbound connection, secret read, or compromise is produced.</aside>
     <section class="hero">
       <p class="eyebrow">MISSION BRIEFING / A GUIDED CODE-TO-CLOUD STORY</p>
       <h1>PHP to Proof.<br><span>The request that wanted a shell.</span></h1>
-      <p class="intro">Follow Ghostpaw's five moves. <a href="/evidence/92ad189c-9a88-4403-b773-52453963e4b8">Recorded run: real logs and Defender observations</a>.</p>
+      <p class="intro">Follow Ghostpaw. <a href="https://php2proof.ninjapaws.org/evidence/92ad189c-9a88-4403-b773-52453963e4b8">Historical reference capture</a>, not your new deployment's logs.</p>
       <p class="walkthrough-state"><strong>Application state: <?= escape($state) ?>.</strong> <?= $fixed ? 'Training endpoints have been removed. Read the story, but do not expect the simulator to run against this fixed application.' : 'Synthetic endpoints are available to the bounded operator simulator. Reading this guide does not run them.' ?></p>
       <p class="walkthrough-notice"><strong>Defender and Sentinel status: not queried by this page.</strong> Capabilities below are not live badges; omitted flags do not mean off. No additional app permissions are needed.</p>
       <p class="evidence-label">REAL / edge behavior &middot; SYNTHETIC / app excerpts &middot; REFERENCE / conditional detections</p>
@@ -243,7 +243,7 @@ $recordedRun = [
       <pre><code>bash scripts/dojo.sh protect --environment dev --yes
 bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
       <p class="walkthrough-check"><strong>Prevention:</strong> marker 403, four other signals 200. Normal traffic must work; origin stays403.</p>
-      <p><a href="/evidence/response">Official response and scripts</a>: stage three request rules in Log first. Response rule99006001 has no WAF hits/logs. WAF mitigation is not a PHP patch.</p>
+      <p><a href="https://php2proof.ninjapaws.org/evidence/response">Official response and scripts</a>: stage three request rules in Log first. Response rule99006001 has no WAF hits/logs. WAF mitigation is not a PHP patch.</p>
     </section>
 
     <section id="remediate" class="walkthrough-chapter" aria-labelledby="remediate-title">
@@ -252,7 +252,7 @@ bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
       <pre><code>bash scripts/dojo.sh remediate --environment dev --yes
 bash scripts/dojo.sh validate --environment dev</code></pre>
       <p>Fixed: five signals404 <strong>without the WAF marker</strong>; health200, origin403. Repair preserves fixed/Prevention/expiry. Fixture removal is not a PHP patch.</p>
-      <p><a href="/evidence/response#response-closure">Resolution script and closure checks</a>: verify running PHP8.4.27+, rebuild images, inspect findings. Approved window required; no after-state is claimed.</p>
+      <p><a href="https://php2proof.ninjapaws.org/evidence/response#response-closure">Resolution script and closure checks</a>: verify running PHP8.4.27+, rebuild images, inspect findings. Approved window required; no after-state is claimed.</p>
     </section>
 
     <section id="containers" class="walkthrough-chapter" aria-labelledby="containers-title">

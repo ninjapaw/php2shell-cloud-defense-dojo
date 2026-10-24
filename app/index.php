@@ -68,13 +68,13 @@ $fixed = $state === 'fixed';
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/" aria-current="page">Story</a><a href="/walkthrough.php">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a></nav><span class="badge">PUBLIC DEMO</span></header>
+  <header class="topbar"><a href="/" class="brand">NINJAPAW <span>/ DEFENSE DOJO</span></a><nav aria-label="Primary"><a href="/" aria-current="page">Story</a><a href="/walkthrough.php">Walkthrough</a><a href="https://github.com/ninjapaw/php2shell-cloud-defense-dojo">GitHub</a><a class="badge" href="https://php2proof.ninjapaws.org/evidence/deploy">Deploy to Azure</a></nav><span class="badge">PUBLIC DEMO</span></header>
   <main id="main">
     <aside class="warning"><strong>TRAINING ONLY.</strong> Isolated, authorized subscriptions. Fabricated data. No exploit, shell, or real compromise is demonstrated.</aside>
     <section class="hero">
       <p class="eyebrow">A CODE-TO-CLOUD DEFENSE STORY / INVESTIGATION 01</p>
       <h1>PHP to Proof.<br><span>Evidence tells the story.</span></h1>
-      <p class="intro">A request is a clue. Follow a harmless PHP2Shell investigation scenario from cloud exposure to real WAF evidence, synthetic application signals, and validated remediation.</p>
+      <p class="intro">A fictional attack story, not an exploit runner. Real WAF behavior; synthetic PHP signals.</p>
       <p><a class="guide-link" href="/walkthrough.php">Start the guided walkthrough <span aria-hidden="true">&rarr;</span></a></p>
       <div class="status <?= $fixed ? 'fixed' : '' ?>"><span class="dot"></span><?= $fixed ? 'FIXED STATE / TRAINING SURFACES REMOVED' : 'TRAINING STATE / SYNTHETIC SIGNALS AVAILABLE' ?></div>
     </section>
