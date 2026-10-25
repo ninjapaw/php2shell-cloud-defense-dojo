@@ -37,7 +37,7 @@ const allowed = [
   'scripts/lib/config.mjs','scripts/lib/azure.mjs','scripts/lib/safety.mjs','detections/correlation.kql',
   'vendor/pawprint/LICENSE','vendor/pawprint/scripts/cloudflare-dns.mjs',
   'operator/package.json','operator/package-lock.json','operator/style.css',
-  'operator/config.mjs','operator/auth.mjs','operator/azure.mjs','operator/store.mjs',
+  'operator/config.mjs','operator/live-config.mjs','operator/auth.mjs','operator/azure.mjs','operator/store.mjs',
   'operator/control.mjs','operator/evidence.mjs','operator/server.mjs','operator/initialize.mjs',
 ];
 if (payload.schemaVersion !== 1 || !payload.files || Object.keys(payload).length !== 2

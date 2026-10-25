@@ -34,8 +34,9 @@ For the recorded deployment, use
 [administrator sign-in](https://p2p-proof1023c-operator-dacubycsdbh4etck.b01.azurefd.net/login).
 The vault is `p2p-proof1023c-operator`; retrieve `operator-admin-username` and
 `operator-admin-password` through authorized private-network access. No password
-is included in this repository or the public recording. Login/test lifetime is
-bounded by the original **2026-10-24 18:45:04.967 UTC** deadline.
+is included in this repository or the public recording. The original fixture
+execution ended at **2026-10-24 18:45:04.967 UTC**. The separately authorized
+private window below does not renew those public-lab actions.
 
 Missing, disabled, expired, malformed or inaccessible credentials fail closed.
 Authentication, session storage, audit, queue and lease failures deny execution;
@@ -50,6 +51,7 @@ they do not produce empty successful dashboards.
 | Investigate | Guarded validation followed by exact-lab matching posture observations |
 | Domain check | Existing read-only custom-domain checks |
 | Collect evidence | Re-query an existing persisted simulation window; never replay its requests |
+| Private live exercises (`/live`) | Separately opted-in, short-lived private process/transport tests, measured fixes, verification and isolated reset |
 
 The full CLI hunting catalogue remains in [the hunting guide](../docs/hunting-pack.md).
 There is no arbitrary command, query or target input.
@@ -87,15 +89,76 @@ Neither script nor UI equates fixture removal with a PHP security update.
 Failed/uncertain writes stop as `reconciliation-required`, never auto-replay or
 restore exposure. Consult the response guide before manually reconciling.
 
-The console must not disable
-Defender, reopen a fixed lab, weaken WAF or turn an intentionally harmless public
-site into an RCE workload.
+The console must not disable Defender, reopen the fixed public app, weaken its
+WAF, or turn the intentionally harmless public site into an RCE workload.
+The private reset described below is restricted to a different, disposable AKS
+deployment and never changes the public PHP version.
 
 The Microsoft App Service `/This_Will_Generate_ASC_Alert` validation marker is
 also deferred until registration eligibility and its observation deadline are
 verified. Microsoft documents a possible 24-hour registration wait and roughly
 1.5 hours or 2-4 hours for an alert. No request or alert is claimed when the
 prerequisites do not fit the original lifetime.
+
+## Private live exercises, fixes and reset
+
+The `/live` catalogue is a separate authorization boundary, not an extension of
+the original simulator. See the [private comparison guide](../docs/container-lab.md#private-portal-window).
+Its closed actions are:
+
+| Action | Measured behavior |
+| --- | --- |
+| Preview | Read the actual private target, PHP/digest and operator test-rule state; produce a session-bound ten-minute approval |
+| Process probe | Run only administrative `id` in the exact isolated, non-root PHP pod; retain actual stdout and AKS command-result metadata |
+| Transport probe | Send a benign UUID marker to the read-only operator edge route; retain the real HTTP response |
+| WAF Log / Block / Remove | Change only this window's marker rule; preserve Prevention, managed rules and all other controls; verify edge propagation |
+| Fix | Move the private deployment from the reviewed affected digest to the reviewed fixed digest; measure actual serving PHP before and after |
+| Reset | Separately confirm a fixed predecessor before restoring only the reviewed affected private digest |
+| Verify / Collect | Inspect actual runtime state or re-query an existing run without replaying it |
+| Reconcile | Record current measured state after an uncertain job; never relabel an unobserved earlier action successful |
+
+These are **real administrative activity and enforcement tests**, not a PHP
+exploit, webshell, arbitrary command interface or proof of compromise. Every
+write consumes one fresh preview tied to the same session, verifier epoch,
+window, target and exact typed resource-group confirmation. Scripts are shown
+before approval. An unknown or partially observed write stops with a durable
+reconciliation requirement; it is not automatically retried or rolled back.
+
+The reviewed owner capture runs Log, process probe, baseline HTTP, Block, Fix,
+Verify, Reset, Verify, final Fix, Verify, and Remove. It leaves the private
+runtime fixed and removes its test-only WAF rule. The real timestamps, query
+outcomes, source gaps and before/after versions remain private until a complete
+redacted candidate is explicitly reviewed.
+
+Activation is out of band and requires all of the following:
+
+- `OPERATOR_LIVE_ENABLED=true`.
+- `OPERATOR_LIVE_WINDOW`: an exact six-field JSON document containing
+  `schemaVersion=1`, a fresh UUID `id`, UTC `notBefore`/`expiresAt`, exact
+  `resourceGroup=rg-p2sc-SUFFIX-dev`, and `autoTeardown=true`. Maximum four hours.
+- `OPERATOR_LIVE_TARGET`: independently observed exact cluster/registry IDs,
+  matching live-group markers, and distinct pinned affected/fixed derived image
+  digests with observation timestamps inside that window.
+- A deployed, enabled exact-group expiry workflow, private-cluster isolation,
+  authenticated ACR, and ready Defender monitoring.
+- Only the scoped private runner/Kubernetes permissions, exact operator test-WAF
+  permission, and exact capture-report permission. The owner renewal additionally
+  needs a temporary write grant on **only the verifier secret**.
+
+`OPERATOR_LIVE_AUTHORIZE_ID` and optional `OPERATOR_LIVE_CAPTURE_ID` must equal
+the approved window UUID. Durable owner intents prevent automatic reauthorization
+or capture replay after an ambiguous restart. Renewal preserves the stored
+username and scrypt password verifier, changes the verifier epoch and validity
+only, and never reads the live password. Remove the temporary verifier-write
+grant once renewal is proved. Keep original expiry, credential initialization,
+legacy capture and public response-write settings unchanged.
+
+The public `/evidence/live` recording and optional `/walkthrough.php` route are
+read-only. Missing or incomplete reviewed evidence is explicitly unavailable;
+fixture/unit-test results cannot become a live recording. The comparison shows
+actual baseline sources independently available without Defender alongside
+actual Defender observations while plans remain enabled. It does **not** claim
+an observed Defender-off run or a guaranteed alert.
 
 ## GhostPaw and evidence
 
@@ -105,7 +168,7 @@ It reuses [the existing guarded lifecycle](../scripts/dojo.mjs), including exact
 resource ownership, independent endpoint checks, origin rejection, redirects
 refused, 15-second/64-KiB responses and 250-ms scenario pacing.
 
-The application events are real ingested records containing **synthetic
+The original simulator's application events are real ingested records containing **synthetic
 fixtures**. No shell, process, real egress, sensitive data read or compromise is
 performed.
 
@@ -135,13 +198,16 @@ remain enabled; Sentinel/analytics are not enabled implicitly.
 - Same-origin referrer policy preserves the browser's Origin on native form
   submissions while suppressing cross-site referrers. Opaque (`null`) and foreign
   Origins remain forbidden; the server never relaxes the Origin check.
-- Persistent login throttling, one start per minute and ten starts per hour.
+- Persistent login throttling and one start per minute; ten starts per hour for
+  the original catalogue and 36 for the separately scoped private workflow.
 - One active lab execution, persistent leases, intent audit and idempotency.
-- Ten-minute job deadline and a maximum of twenty bounded lab HTTP requests.
+- Ten-minute legacy job deadline and a maximum of twenty bounded lab HTTP
+  requests; private live jobs use twelve minutes and 780-second queue visibility.
 - Authorization, credential epoch, lease and expiry rechecked during execution.
 - At-least-once queue delivery never automatically replays a potentially started
   simulation. A crashed/ambiguous job blocks new dispatch until reconciliation.
-- Sessions and new test starts cannot outlive the original lab expiry.
+- Sessions and new starts cannot outlive their separately authorized scope;
+  a new private epoch never renews expired original public-lab actions.
 
 Blob versions and application append-only audit entries aid investigation; this
 is not a claim of immutable or tamper-proof forensic storage.
@@ -157,7 +223,9 @@ its SKU.
 Runtime grants are limited to the owned lab's read operations, its exact workspace,
 the private operator Blob container/queue, subscription identity/pricing reads,
 and the exact verifier secret. It has no workload deployment, WAF, DNS, pricing
-write or public-site publishing permission.
+write or public-site publishing permission by default. The explicit private
+feature adds only the exact scoped permissions described above, not subscription
+administration or grants to the public PHP identity.
 
 One-time initialization is explicitly enabled out of band with a deployment UUID.
 It uses a temporary vault-scoped Secrets Officer grant to establish credentials,
@@ -177,6 +245,20 @@ The build uses a pinned, build-only minifier and a production-only locked manife
 The resulting runtime is independently SHA-256 verified and tested. Its allowlist,
 sixteen-chunk maximum and combined 60-KiB protected-input bound are not expanded.
 No `.env`, tests, credentials, arbitrary files or private container lab are shipped.
+The optional private feature uses two separately bounded overlays, installed in
+order while live execution remains disabled:
+
+```powershell
+az bicep build --file infra\private-live.bicep --outfile C:\path\to\private-live.json
+node operator\build-live.mjs C:\path\to\new-live-foundation private-live-foundation C:\path\to\private-live.json
+node operator\build-live.mjs C:\path\to\new-live-runtime private-live-runtime
+```
+
+Each keeps the same protected-source cap and exact file allowlist. Activation
+checks hashes for all 21 runtime/helper assets to reject mixed overlays. A
+reviewed recording is a third, static-only `private-live-recording` build; it
+does not reactivate execution. The native private template exposed for download
+is metadata, not a deployment triggered by visiting the site.
 
 Hunting assets are a separate bounded overlay so the original 60-KiB protected
 input limit is not widened:

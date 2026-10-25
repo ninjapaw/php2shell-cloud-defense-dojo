@@ -153,7 +153,7 @@ export class ReadOnlyAzure {
         throw error;
       }
       assertResource(result, n.groupId);
-      if (result.tags?.["pawprint.expiresAt"] !== this.config.expiry) throw new Error("Original lab expiry differs from the operator's immutable boundary.");
+      if (result.tags?.["pawprint.expiresAt"] !== (this.config.originalExpiry ?? this.config.expiry)) throw new Error("Original lab expiry differs from the operator's immutable boundary.");
       return args[1] === "exists" ? true : result;
     }
     if (equal("webapp", "show", "--resource-group", n.group, "--name", n.app)) {

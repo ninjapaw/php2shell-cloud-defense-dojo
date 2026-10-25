@@ -5,13 +5,15 @@ param identityId string
 param clientId string
 param sourceSha256 string
 param originalExpiry string
+param liveWindow object = {}
+param publicationId string = ''
 @secure()
 param sourceBundle object
 
 var sourceVariables = [for (chunk, index) in sourceBundle.chunks: { name: 'SOURCE_${index}', secureValue: chunk }]
 
 resource job 'Microsoft.ContainerInstance/containerGroups@2025-09-01' = {
-  name: 'p2p-${suffix}-hunting-publish'
+  name: empty(publicationId) ? 'p2p-${suffix}-hunting-publish' : 'p2p-${suffix}-publish-${take(publicationId, 8)}'
   location: location
   identity: { type: 'UserAssigned', userAssignedIdentities: { '${identityId}': {} } }
   properties: {
@@ -30,6 +32,7 @@ resource job 'Microsoft.ContainerInstance/containerGroups@2025-09-01' = {
           { name: 'MAIN_GROUP', value: loadJsonContent('../config/dev.json').resourceGroup }
           { name: 'DOJO_SUFFIX', value: suffix }
           { name: 'ORIGINAL_EXPIRY', value: originalExpiry }
+          { name: 'LIVE_WINDOW_JSON', value: string(liveWindow) }
           { name: 'SOURCE_SHA256', value: sourceSha256 }
           { name: 'SOURCE_COUNT', value: string(length(sourceBundle.chunks)) }
         ], sourceVariables)

@@ -52,3 +52,27 @@ print("stdlib archive checks passed")
 `;
   assert.match(runTool("python", ["-c", check]), /stdlib archive checks passed/);
 });
+
+test("private owner renewal grants only the exact verifier's data-plane set permission", () => {
+  const root = readFileSync(new URL("../../infra/private-live.bicep", import.meta.url), "utf8");
+  const access = readFileSync(new URL("../../infra/private-live-operator-access.bicep", import.meta.url), "utf8");
+  const role = root.split("\n").find((line) => line.includes("key: 'verifier'"));
+  assert.match(role, /actions: \[\], dataActions: \['Microsoft\.KeyVault\/vaults\/secrets\/setSecret\/action'\]/);
+  assert.doesNotMatch(role, /secrets\/write|secrets\/\*|getSecret|readMetadata/);
+  assert.match(access, /name: 'operator-admin-verifier'/);
+  assert.match(access, /resource verifierWriter[\s\S]*?scope: verifier[\s\S]*?roleDefinitionId: verifierRoleId/);
+  assert.doesNotMatch(access, /operator-admin-password|operator-admin-username/);
+});
+
+test("expiry cleanup retains completed-pair progress in one bounded stateful run before deleting the group", () => {
+  const source = readFileSync(new URL("../../infra/private-live-cleanup.bicep", import.meta.url), "utf8");
+  assert.match(source, /RetryRevocation: \{\s+type: 'Until'/);
+  assert.match(source, /limit: \{ count: 120, timeout: 'PT1H' \}/);
+  assert.match(source, /parameters\(\\'externalGrants\\'\)\[variables\(\\'CleanupCount\\'\)\]\[\\'worker\\'\]/);
+  assert.match(source, /parameters\(\\'externalGrants\\'\)\[variables\(\\'CleanupCount\\'\)\]\[\\'own\\'\]/);
+  assert.match(source, /CountCompletedPair: \{ type: 'IncrementVariable'/);
+  assert.match(source, /runAfter: \{ RetryRevocation: \['Succeeded', 'Failed', 'TimedOut'\] \}/);
+  assert.doesNotMatch(source, /type: 'Foreach'|items\(\\'RevokeExternal\\'\)/);
+  assert.match(source, /Private resources remain billable; an owner must reconcile cleanup/);
+  assert.match(source, /greaterOrEquals: \['@ticks\(utcNow\(\)\)'/);
+});

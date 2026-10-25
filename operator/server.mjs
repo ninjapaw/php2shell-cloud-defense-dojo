@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual, createHash } from "node:crypto";
 import { ManagedIdentityCredential } from "@azure/identity";
 import { SecretClient } from "@azure/keyvault-secrets";
 import { BlobServiceClient } from "@azure/storage-blob";
@@ -68,6 +68,29 @@ export function createOperatorServer(config, { store, auth, control, log = conso
         const css = await readFile(new URL("./style.css", import.meta.url), "utf8");
         response.writeHead(200, { ...headers, "Content-Type": "text/css; charset=utf-8" });
         response.end(css);
+        return;
+      }
+      if (request.method === "GET" && /^\/evidence\/live-probe\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(url.pathname)) {
+        response.writeHead(200, { ...headers, "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ kind: "benign-read-only-transport-marker", runId: url.pathname.split("/").at(-1),
+          observedAt: new Date().toISOString(), executesCommands: false, testsPhpExploit: false }));
+        return;
+      }
+      if (request.method === "GET" && ["/evidence/live", "/walkthrough.php"].includes(url.pathname)) {
+        send(200, "PHP to Proof: real activity, prevention, fixes and proof", await (await import("./live-public.mjs")).publicLivePage(config), {}, true);
+        return;
+      }
+      if (request.method === "GET" && ["/evidence/live/template.json", "/evidence/live/template.sha256"].includes(url.pathname)) {
+        let bytes;
+        try { bytes = await readFile(new URL("./public-live-template.json", import.meta.url)); }
+        catch (error) {
+          if (error.code === "ENOENT") throw new OperatorError(404, "live-template-unpublished", "No reviewed private live template is published.");
+          throw error;
+        }
+        if (bytes.length > 262_144) throw new Error("Private live template source exceeds its read bound.");
+        const checksum = url.pathname.endsWith(".sha256");
+        response.writeHead(200, { ...headers, "Content-Type": checksum ? "text/plain; charset=utf-8" : "application/json; charset=utf-8" });
+        response.end(checksum ? `${createHash("sha256").update(bytes).digest("hex")}  private-live.json\n` : bytes);
         return;
       }
       if (request.method === "GET" && ["/evidence/deploy", "/evidence/deploy/source.zip", "/evidence/deploy/source.sha256"].includes(url.pathname)) {
@@ -148,11 +171,14 @@ export function createOperatorServer(config, { store, auth, control, log = conso
           return;
         }
         if (url.pathname === "/jobs") {
-          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId", "huntId", "responseId", "responsePlanJobId", "responseFingerprint", "responseConfirmation"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
+          if (Object.keys(input).some((key) => !["csrf", "operation", "idempotencyKey", "sourceJobId", "huntId", "responseId", "responsePlanJobId", "responseFingerprint", "responseConfirmation", "liveId", "livePlanJobId", "liveFingerprint", "liveConfirmation", "liveSourceJobId"].includes(key))) throw new OperatorError(400, "unknown-field", "Unexpected job field or target override.");
           const approval = Object.fromEntries([["id", input.responseId], ["planJobId", input.responsePlanJobId],
             ["fingerprint", input.responseFingerprint], ["confirmation", input.responseConfirmation]].filter(([, value]) => value !== undefined));
+          const live = Object.fromEntries([["id", input.liveId], ["planJobId", input.livePlanJobId],
+            ["fingerprint", input.liveFingerprint], ["confirmation", input.liveConfirmation],
+            ["sourceJobId", input.liveSourceJobId]].filter(([, value]) => value !== undefined));
           const job = await control.start(session, input.operation, input.idempotencyKey, input.sourceJobId, input.huntId,
-            Object.keys(approval).length ? approval : undefined);
+            Object.keys(approval).length ? approval : undefined, Object.keys(live).length ? live : undefined);
           response.writeHead(303, { ...headers, Location: `/jobs/${job.id}` });
           response.end();
           return;
@@ -161,6 +187,10 @@ export function createOperatorServer(config, { store, auth, control, log = conso
       }
       if (request.method !== "GET") throw new OperatorError(405, "method", "Only authenticated fixed HTML actions are supported.");
       const session = await auth.session(cookie(request));
+      if (url.pathname === "/live") {
+        send(200, "Private live exercises, fixes and isolated reset", await (await import("./live-control.mjs")).privateLivePage(config, store, session));
+        return;
+      }
       if (url.pathname === "/response") {
         send(200, "GhostPaw response scripts and approvals", await (await import("./response.mjs")).privateResponsePage(config, store, session));
         return;
@@ -171,9 +201,9 @@ export function createOperatorServer(config, { store, auth, control, log = conso
       }
       if (url.pathname === "/") {
         const jobs = await store.recentJobs();
-        send(200, "GhostPaw test console", `<p><a href="/response">Official-response scripts: detection to prevention, resolution and validation</a> / <a href="/hunts">Hunting pack: scenarios, queries, actual results and additional value</a></p><p>Exact lab: ${escape(config.names.group)}. Original expiry: ${escape(config.expiry)}. Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled
+        send(200, "GhostPaw test console", `<p><a href="/live">Private live exercises: actual activity, fix, verify and isolated reset</a> / <a href="/response">Official-response scripts: detection to prevention, resolution and validation</a> / <a href="/hunts">Hunting pack: scenarios, queries, actual results and additional value</a></p><p>Exact original lab: ${escape(config.names.group)}. Original expiry: ${escape(config.originalExpiry ?? config.expiry)}.${config.liveWindow ? ` Separate private scope: ${escape(config.liveWindow.resourceGroup)}, ending ${escape(config.expiry)}. Original execution is not renewed.` : ""} Credentials, sessions, audit and queue storage are required before execution.</p><p>Baseline means actual source logs available independently of Defender—not an observed Defender-disabled environment. Enabled plans will never be switched off.</p>${CATALOGUE.filter((item) => !item.contextRequired).map((item) => item.enabled && (!config.liveWindow || Date.now() < config.originalExpiresAt)
           ? `<form action="/jobs" method="post">${hidden("csrf", session.csrf)}${hidden("operation", item.id)}${hidden("idempotencyKey", newRequestId())}<button>${escape(item.title)}</button></form>`
-          : `<p><strong>${escape(item.title)}</strong>: disabled. ${escape(item.reason)}</p>`).join("")}<h2>Private run history</h2><ul>${jobs.map((job) => `<li><a href="/jobs/${escape(job.id)}">${escape(job.queuedAt)} / ${escape(job.operation)} / ${escape(job.status)}</a></li>`).join("")}</ul><form action="/logout" method="post">${hidden("csrf", session.csrf)}<button>Sign out</button></form>`);
+          : `<p><strong>${escape(item.title)}</strong>: disabled. ${escape(item.reason ?? "The original execution authorization remains expired; use the separate private live scope.")}</p>`).join("")}<h2>Private run history</h2><ul>${jobs.map((job) => `<li><a href="/jobs/${escape(job.id)}">${escape(job.queuedAt)} / ${escape(job.operation)} / ${escape(job.status)}</a></li>`).join("")}</ul><form action="/logout" method="post">${hidden("csrf", session.csrf)}<button>Sign out</button></form>`);
         return;
       }
       if (/^\/jobs\/[0-9a-f-]{36}$/.test(url.pathname)) {
@@ -183,7 +213,7 @@ export function createOperatorServer(config, { store, auth, control, log = conso
         const evidence = job.value.evidenceKey ? await store.read(job.value.evidenceKey) : undefined;
         const refresh = job.value.operation === "simulate" && job.value.result?.runId
           ? `<form action="/jobs" method="post">${hidden("csrf", session.csrf)}${hidden("operation", "collect-evidence")}${hidden("idempotencyKey", newRequestId())}${hidden("sourceJobId", job.value.id)}<button>Collect current logs for this existing run (no replay)</button></form>` : "";
-        send(200, "Private run and actual evidence", `<p><a href="/">Return to console</a>. Refresh this page to read persisted progress; refresh does not execute a test.</p><pre>${escape(JSON.stringify(job.value, null, 2))}</pre>${refresh}${evidence ? `<h2>Actual captured sources</h2><pre>${escape(JSON.stringify(evidence.value, null, 2))}</pre>` : "<p>Evidence has not been captured for this run. No alert is inferred.</p>"}`);
+        send(200, "Private run and actual evidence", `<p><a href="/">Return to console</a> / <a href="/live">Private live playbook</a>. Refresh this page to read persisted progress; refresh does not execute a test.</p><pre>${escape(JSON.stringify(job.value, null, 2))}</pre>${refresh}${evidence ? `<h2>Actual captured sources</h2><pre>${escape(JSON.stringify(evidence.value, null, 2))}</pre>` : "<p>Evidence has not been captured for this run. No alert is inferred.</p>"}`);
         return;
       }
       throw new OperatorError(404, "not-found", "Operator page not found.");
@@ -202,11 +232,12 @@ export function createOperatorServer(config, { store, auth, control, log = conso
 
 export async function main() {
   const config = loadConfig();
+  if (config.liveWindow) await (await import("./live-integrity.mjs")).assertLiveRuntimeIntegrity();
   const credential = new ManagedIdentityCredential();
   const blobs = new BlobServiceClient(`https://${config.storageAccount}.blob.core.windows.net`, credential);
   const queue = new QueueClient(`https://${config.storageAccount}.queue.core.windows.net/${config.queueName}`, credential);
   const store = new AzureStore(blobs.getContainerClient(config.blobContainer), queue);
-  const vault = new SecretClient(`https://${config.vaultName}.vault.azure.net`, credential);
+  const vault = new SecretClient(`https://${config.vaultName}.vault.azure.net`, credential, { retryOptions: { maxRetries: 0 } });
   const credentials = keyVaultCredentials(vault, config);
   const auth = new Authentication(config, store, credentials);
   const control = new ControlPlane(config, store, credentials, (guard) => new ReadOnlyAzure(config, credential, { guard }));
@@ -222,6 +253,15 @@ export async function main() {
   }, 2000);
   worker.unref();
   server.listen(config.port, "0.0.0.0", () => console.log("PHP to Proof operator listening; authenticated durable controls are required."));
+  if (config.liveWindow && config.liveAuthorizeId) {
+    const initializeLive = async () => {
+      const { authorizeLiveWindow } = await import("./live-authorize.mjs");
+      await authorizeLiveWindow(config, { store, vault,
+        readGroup: (id) => new ReadOnlyAzure(config, credential).arm(`${id}?api-version=2025-04-01`) }, config.liveAuthorizeId);
+      if (config.liveCaptureId) await (await import("./live-capture.mjs")).initializeLiveCapture(control, config.liveCaptureId);
+    };
+    initializeLive().catch((error) => console.error(`ERROR: separately authorized private live initialization failed: ${redact(error.message)}`));
+  }
   if (process.env.OPERATOR_HUNT_CAPTURE_ID) {
     const { initializeHuntCapture } = await import("./hunts.mjs");
     initializeHuntCapture(config, store, (guard) => new ReadOnlyAzure(config, credential, { guard }),

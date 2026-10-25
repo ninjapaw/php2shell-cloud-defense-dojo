@@ -91,8 +91,9 @@ export class AzureStore {
     await this.queue.sendMessage(Buffer.from(JSON.stringify({ jobId })).toString("base64"));
   }
 
-  async receive() {
-    const result = await this.queue.receiveMessages({ numberOfMessages: 1, visibilityTimeout: 660 });
+  async receive(visibilityTimeout = 660) {
+    if (![660, 780].includes(visibilityTimeout)) throw new Error("Unsupported fixed queue visibility boundary.");
+    const result = await this.queue.receiveMessages({ numberOfMessages: 1, visibilityTimeout });
     if (!Array.isArray(result.receivedMessageItems)) throw new Error("Invalid durable queue response.");
     return result.receivedMessageItems[0];
   }

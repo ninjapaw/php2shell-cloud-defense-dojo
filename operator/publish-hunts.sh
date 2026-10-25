@@ -62,6 +62,35 @@ elif source["kind"] == "response-maintenance":
     script = files.get("operator/public-scripts/response.mjs")
     if not isinstance(script, str) or len(script) > 262144 or "responseCli" not in script:
         raise ValueError("Reviewed response script bundle rejected.")
+elif source["kind"] in ("private-live-foundation", "private-live-runtime"):
+    foundation = {"scripts/lib/private-live.mjs", "scripts/lib/container-lab.mjs", "scripts/lib/response.mjs", "container-lab/images.json", "operator/public-live-template.json"}
+    runtime = {
+        "operator/config.mjs", "operator/auth.mjs", "operator/azure.mjs", "operator/control.mjs", "operator/server.mjs",
+        "operator/store.mjs", "operator/style.css", "operator/live-config.mjs", "operator/live-authorize.mjs",
+        "operator/live-control.mjs", "operator/live-waf.mjs", "operator/live-azure.mjs", "operator/live.mjs",
+        "operator/live-evidence.mjs", "operator/live-public.mjs", "operator/live-capture.mjs",
+        "operator/live-integrity.mjs", "operator/live-integrity.json",
+    }
+    allowed = foundation if source["kind"] == "private-live-foundation" else runtime
+    if source["kind"] == "private-live-foundation":
+        template = json.loads(files["operator/public-live-template.json"])
+        if template.get("$schema") != "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#" or len(template.get("resources", [])) != 7 or template.get("metadata", {}).get("_generator", {}).get("name") != "bicep":
+            raise ValueError("Native private live template source rejected.")
+        (pathlib.Path(os.environ["HUNT_PUBLICATION_ROOT"]) / "native-private-live.json").write_text(files["operator/public-live-template.json"])
+    window = json.loads(os.environ["LIVE_WINDOW_JSON"])
+    if set(window) != {"schemaVersion", "id", "notBefore", "expiresAt", "resourceGroup", "autoTeardown"} or window["schemaVersion"] != 1 or window["autoTeardown"] is not True:
+        raise ValueError("Private live publication needs its separate exact window.")
+    if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", window["id"]):
+        raise ValueError("Invalid private live window UUID.")
+    start, end = [datetime.datetime.fromisoformat(window[key].replace("Z", "+00:00")) for key in ("notBefore", "expiresAt")]
+    if not 60 <= (end-start).total_seconds() <= 14400 or not start <= datetime.datetime.now(datetime.timezone.utc) < end or window["resourceGroup"] != "rg-p2sc-" + os.environ["DOJO_SUFFIX"] + "-dev":
+        raise ValueError("Private live publication is outside its separate four-hour exact-group window.")
+    (pathlib.Path(os.environ["HUNT_PUBLICATION_ROOT"]) / "live-window.json").write_text(json.dumps(window))
+elif source["kind"] == "private-live-recording":
+    allowed = {"operator/public-evidence/live.json"}
+    snapshot = json.loads(files["operator/public-evidence/live.json"])
+    if snapshot.get("reviewed") is not True or snapshot.get("kind") != "reviewed-private-live" or not 8 <= len(snapshot.get("steps", [])) <= 24:
+        raise ValueError("Only a complete separately reviewed private live recording is publishable.")
 elif source["kind"] == "recording":
     allowed = {"operator/public-evidence/hunting.json"}
     snapshot = json.loads(files["operator/public-evidence/hunting.json"])
@@ -86,6 +115,20 @@ az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 [[ "$(az group show --name "$OPERATOR_GROUP" --query "tags.\"pawprint.expiresAt\"" --output tsv)" == "$ORIGINAL_EXPIRY" ]] || { echo 'Original operator lifetime drifted.' >&2; exit 1; }
 [[ "$(az group show --name "$OPERATOR_GROUP" --query "tags.\"dojo.scenario\"" --output tsv)" == php2proof-operator ]] || { echo 'Operator ownership drifted.' >&2; exit 1; }
 kind="$(cat "${work}/kind.txt")"
+if [[ "$kind" == private-live-runtime || "$kind" == private-live-foundation ]]; then
+  live_group="$(jq -er .resourceGroup "${work}/live-window.json")"
+  live_id="$(jq -er .id "${work}/live-window.json")"
+  live_expiry="$(jq -er .expiresAt "${work}/live-window.json")"
+  [[ "$(az group show --name "$live_group" --query "tags.\"dojo.liveWindowId\"" -o tsv)" == "$live_id" ]] || { echo 'Private live group ownership drifted.' >&2; exit 1; }
+  [[ "$(az group show --name "$live_group" --query "tags.\"dojo.liveScenario\"" -o tsv)" == php2proof-private-live ]] || { echo 'Private live group scenario drifted.' >&2; exit 1; }
+  [[ "$(az group show --name "$live_group" --query "tags.\"pawprint.expiresAt\"" -o tsv)" == "$live_expiry" ]] || { echo 'Private live group expiry drifted.' >&2; exit 1; }
+fi
+if [[ "$kind" == private-live-foundation ]]; then
+  az ts create --resource-group "$OPERATOR_GROUP" --name "php2proof-private-live-${DOJO_SUFFIX}" \
+    --version "live-${live_id}" --location centralus --template-file "${work}/native-private-live.json" \
+    --tags pawprint.managed=true pawprint.environment=dev "dojo.liveWindowId=${live_id}" \
+    --only-show-errors --output none
+fi
 target_group="$OPERATOR_GROUP"
 target_app="p2p-${DOJO_SUFFIX}-operator"
 if [[ "$kind" == public-walkthrough-maintenance || "$kind" == public-navigation-maintenance ]]; then

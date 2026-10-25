@@ -6,6 +6,7 @@ param location string = 'centralus'
 param operatorGroupName string = loadJsonContent('../config/operator.dev.json').resourceGroup
 param publishPublicWalkthrough bool = false
 param mainGroupName string = loadJsonContent('../config/dev.json').resourceGroup
+param privateLiveGroupName string = ''
 
 var helperName = 'NP-PHPToProof-Operator-Deploy-Temp-${take(invocationId, 8)}'
 var tags = {
@@ -33,6 +34,11 @@ module publicSite './operator-publisher-site-access.bicep' = if (publishPublicWa
   scope: resourceGroup(mainGroupName)
   params: { principalId: identity.outputs.principalId, invocationId: invocationId, suffix: suffix }
 }
+module privateReader './operator-publisher-private-read.bicep' = if (!empty(privateLiveGroupName)) {
+  name: 'operator-publisher-private-read'
+  scope: resourceGroup(privateLiveGroupName)
+  params: { principalId: identity.outputs.principalId, invocationId: invocationId }
+}
 resource metadata 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(subscription().id, invocationId, 'operator-publisher-metadata')
   properties: {
@@ -48,3 +54,4 @@ output identityId string = identity.outputs.identityId
 output metadataAssignmentId string = metadata.id
 output operatorAssignmentId string = contributor.outputs.assignmentId
 output publicSiteAssignmentId string = publishPublicWalkthrough ? publicSite!.outputs.assignmentId : ''
+output privateReaderAssignmentId string = !empty(privateLiveGroupName) ? privateReader!.outputs.assignmentId : ''

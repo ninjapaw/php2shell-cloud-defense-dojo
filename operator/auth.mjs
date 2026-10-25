@@ -43,9 +43,10 @@ export function validateVerifier(secret, config, now = Date.now()) {
       || !value || Object.keys(value).length !== keys.length || Object.keys(value).some((key) => !keys.includes(key))
       || value.schemaVersion !== 1 || !/^[a-z][a-z0-9-]{2,31}$/.test(value.username)
       || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.epoch)
+      || (config.liveWindow && value.epoch !== config.liveWindow.id)
       || !Number.isFinite(Date.parse(value.notBefore)) || Date.parse(value.notBefore) > now
       || value.expiresAt !== config.expiry) {
-    throw new Error("Key Vault credential is disabled, expired, malformed or outside the original lab lifetime.");
+    throw new Error("Key Vault credential is disabled, expired, malformed or outside the approved lab lifetime/epoch.");
   }
   base64(value.salt, 32);
   base64(value.verifier, 64);
