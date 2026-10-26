@@ -70,9 +70,18 @@ export function changeProbeRule(config, policy, action) {
   return body;
 }
 
+// Detection logs a Block match without enforcing it, so the edge still answers 200.
+export function expectedTransportStatus(ruleAction, mode) {
+  if (!["Log", "Block", "absent"].includes(ruleAction) || !["Detection", "Prevention"].includes(mode)) {
+    throw new Error("Unknown WAF rule action or mode for transport expectation.");
+  }
+  return ruleAction === "Block" && mode === "Prevention" ? 403 : 200;
+}
+
 export function liveWafObservation(config, policy) {
+  const rule = probeRuleState(config, policy);
   return {
-    policyId: operatorPolicyId(config), mode: "Prevention", rule: probeRuleState(config, policy),
+    policyId: operatorPolicyId(config), mode: policy.properties.policySettings.mode, rule,
     fingerprint: responseFingerprint(livePolicyBody(config, policy)),
     note: "This rule controls only the operator-host benign transport-test route; it is not a PHP CVE signature.",
   };

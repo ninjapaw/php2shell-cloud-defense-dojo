@@ -5,7 +5,7 @@ import { UUID } from "../scripts/lib/config.mjs";
 import { responseFingerprint } from "../scripts/lib/response.mjs";
 import { assertLiveGroup } from "./live-config.mjs";
 import { AzureReadError, boundedJson } from "./azure.mjs";
-import { changeProbeRule, livePolicyBody, liveWafObservation, operatorPolicyId, LIVE_WAF_API, LIVE_PROBE_PATH } from "./live-waf.mjs";
+import { changeProbeRule, expectedTransportStatus, livePolicyBody, liveWafObservation, operatorPolicyId, LIVE_WAF_API, LIVE_PROBE_PATH } from "./live-waf.mjs";
 
 const ARM = "https://management.azure.com";
 const AKS_AUDIENCE = "6dae42f8-4368-4678-94ff-3960e28e3630/.default";
@@ -164,7 +164,7 @@ export function liveIo(control, azure, guard, fetchImpl, { wait = delay } = {}) 
         };
         if (withoutProbe(observed) !== withoutProbe(before)) throw new Error("A non-test WAF control changed; reconciliation is required.");
         if (state.rule.action === (action === "Remove" ? "absent" : action)) {
-          const expected = action === "Block" ? 403 : 200;
+          const expected = expectedTransportStatus(state.rule.action, state.mode);
           const probe = await transport(jobId);
           if (probe.status === expected) return { waf: state, transport: probe };
         }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { changeProbeRule, livePolicyBody, liveProbeRule, liveWafObservation, operatorPolicyId } from "../live-waf.mjs";
+import { changeProbeRule, expectedTransportStatus, livePolicyBody, liveProbeRule, liveWafObservation, operatorPolicyId } from "../live-waf.mjs";
 
 const config = {
   invocation: { suffix: "proof1023c" },
@@ -50,4 +50,16 @@ test("foreign policies, disabled protection, colliding or drifted test rules are
   assert.throws(() => changeProbeRule(config, policy(), "Block"), /Log baseline/);
   assert.throws(() => changeProbeRule(config, policy(), "Remove"), /No owned/);
   assert.throws(() => changeProbeRule(config, policy(), "arbitrary"), /Unknown/);
+});
+
+test("transport expectations and observations follow the policy mode, not a fixed label", () => {
+  assert.equal(expectedTransportStatus("Block", "Prevention"), 403);
+  assert.equal(expectedTransportStatus("Block", "Detection"), 200);
+  assert.equal(expectedTransportStatus("Log", "Prevention"), 200);
+  assert.equal(expectedTransportStatus("absent", "Prevention"), 200);
+  assert.throws(() => expectedTransportStatus("Block", "Disabled"), /Unknown/);
+  assert.equal(liveWafObservation(config, policy()).mode, "Prevention");
+  const detection = policy();
+  detection.properties.policySettings.mode = "Detection";
+  assert.throws(() => liveWafObservation(config, detection), /Prevention/);
 });

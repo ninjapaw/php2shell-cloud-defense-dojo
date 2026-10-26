@@ -304,6 +304,9 @@ test("review candidates omit sensitive raw fields; public cards require a comple
   const incomplete = structuredClone(candidate);
   incomplete.steps = incomplete.steps.filter((step) => step.action !== "runtime-reset");
   assert.throws(() => validateReviewedLive(incomplete), /required baseline/);
+  const detection = structuredClone(candidate);
+  detection.steps.find((step) => step.action === "waf-block").waf.mode = "Detection";
+  assert.throws(() => validateReviewedLive(detection), /required baseline/);
 });
 
 test("anonymous transport marker is bounded/read-only, while private live execution still needs edge, authentication, Origin and CSRF", async (t) => {

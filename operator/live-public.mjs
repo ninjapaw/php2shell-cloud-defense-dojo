@@ -121,7 +121,7 @@ export function validateReviewedLive(value) {
   const reset = value.steps.find((step) => step.action === "runtime-reset" && step.runtime?.before.phpVersion === "8.4.27" && step.runtime.after.phpVersion === "8.4.26");
   if (!affected || fixed.length < 2 || !reset
       || !value.steps.some((step) => step.action === "waf-log" && step.transport?.status === 200 && step.waf?.ruleAction === "Log")
-      || !value.steps.some((step) => step.action === "waf-block" && step.transport?.status === 403 && step.waf?.ruleAction === "Block")
+      || !value.steps.some((step) => step.action === "waf-block" && step.transport?.status === 403 && step.waf?.ruleAction === "Block" && step.waf?.mode === "Prevention")
       || !value.steps.some((step) => step.action === "waf-remove" && step.transport?.status === 200 && step.waf?.ruleAction === "absent")
       || Date.parse(fixed.at(-1).startedAt) < Date.parse(reset.endedAt)) throw new Error("The reviewed recording does not prove the required baseline, block, fix, private reset, final fix and test-rule removal cycle.");
   return value;
