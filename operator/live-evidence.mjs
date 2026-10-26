@@ -10,7 +10,8 @@ export function liveEvidenceQueries(config, run, capturedAt) {
       || !Number.isFinite(Date.parse(capturedAt)) || Date.parse(run.startedAt) > Date.parse(run.endedAt)
       || Date.parse(run.startedAt) < config.liveWindow.startsAt || Date.parse(run.endedAt) > config.expiresAt
       || Date.parse(capturedAt) < Date.parse(run.endedAt)) throw new Error("Actual bounded private run chronology is required for log collection.");
-  const start = new Date(Math.max(config.liveWindow.startsAt, Date.parse(run.startedAt) - 60_000)).toISOString();
+  // WAF rows can carry a whole-second timestamp; flooring the opening keeps such a row when the window opens mid-second.
+  const start = new Date(Math.max(Math.floor(config.liveWindow.startsAt / 1000) * 1000, Date.parse(run.startedAt) - 60_000)).toISOString();
   const end = new Date(Math.min(Date.parse(capturedAt), config.expiresAt)).toISOString();
   const audit = `AKSAuditAdmin
 | where TimeGenerated between (datetime(${start}) .. datetime(${end}))
