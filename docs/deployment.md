@@ -99,15 +99,15 @@ From a complete checkout the same Node command works without an npm install.
 2. Reuse Azure CLI sign-in, or explicitly select browser/WAM/device-code login.
 3. Choose an enabled subscription and confirm a local active-subscription change
    if needed.
-4. Choose Azure region, unique4–12-character suffix, a fresh group name,
-  1–72-hour metadata lifetime and PHP8.4/8.5 branch.
+4. Choose Azure region, unique 4–12-character suffix, a fresh group name,
+  1–72-hour metadata lifetime and PHP 8.4/8.5 branch.
 5. Explicitly select any billable subscription-wide CSPM, workspace Sentinel and
    synthetic analytics opt-ins. Defaults are off; existing plans are never
    disabled. Pricing/flags alone are not proof of scanning or detection.
-6. Retain the nonsecret `.azure/profiles/<suffix>.json` and reuse it:
+6. Retain the nonsecret `.azure/profiles/<suffix>.json` and reuse it with `DOJO_SUFFIX` set to the suffix from step 4:
 
 ```bash
-node scripts/wizard.mjs --profile .azure/profiles/<your-suffix>.json
+node scripts/wizard.mjs --profile ".azure/profiles/$DOJO_SUFFIX.json"
 ```
 
 Profiles are strict validated JSON, created without overwriting existing files.

@@ -276,30 +276,58 @@ an empty-success fallback. The recording mode accepts only the reviewed fixed
 `operator/public-evidence/hunting.json` snapshot. Neither build publishes itself.
 
 `module` mode is restricted to the fixed `operator/hunts.mjs` maintenance file.
-After the original expiry, only that code-maintenance overlay and reviewed static
-recordings may be published; full releases still stop. This does not renew
-credentials, permit a login/job, or authorize another capture. Runtime expiry
-guards remain intact and the out-of-band capture setting is cleared.
+After the original expiry, `publish-runtime.sh` rejects every runtime publish.
+`publish-hunts.sh` applies the time check only to the full `release` kind. Its other
+kinds are not rejected for expiry, but every kind still requires the operator group's
+`pawprint.expiresAt` tag to equal `ORIGINAL_EXPIRY`. Publishing a code-maintenance
+overlay does not renew credentials, permit a login/job, or authorize another capture.
+Publishing the operator app also requires the deployment-only
+`OPERATOR_HUNT_CAPTURE_ID` setting to be empty, which `publish-hunts.sh` checks before
+deploying.
 
-The recorded capture ran at **18:35:01–18:35:03 UTC on 2026-10-24**, before the
-original deadline. It contains three successful Resource Graph queries (four
-Healthy assessments and one PHP runtime/inventory row in each inventory view),
-18 explicit unavailable scenarios and six outside the selected lab scope.
-Seven log-source hunts were not executed because metadata exceeded the existing
-1-MiB response bound. The maintenance fix keeps that bound: independently
-successful source queries may still provide positive evidence, while zero rows
-with unknown source readiness remain a distinct gap. No rerun or result is
-invented after expiry; a fresh authorized execution window is required.
+The recorded hunting snapshot ran at **18:35:01–18:35:03 UTC on 2026-10-24**, before
+the original deadline. Three Resource Graph queries succeeded: `php-assessments`
+returned four Healthy assessment rows, and `appservice-runtimes` and
+`appservice-runtime-discovery` each returned one PHP|8.4 row. Their evidence kinds mark them as leads or review-required items, not patch
+proof. Eighteen hunts are unavailable: seven log-source
+hunts carry the 1-MiB response-bound reason, and eleven Defender XDR hunts carry the
+no-connector reason. Six are not applicable to the selected scope. The committed
+runner keeps the 1-MiB bound, but each source query runs independently: a query
+that stays under it still returns matches for review, and zero rows with unknown
+source readiness are recorded as a source gap rather than clearance. The
+snapshot records the upstream pack revision, not the runner revision that
+produced it. It also states that no execution window was extended, so any rerun
+needs a new authorized window. That statement does not address lookbacks: the
+runner's `bindHuntQuery` (`operator/hunts.mjs`) rewrites the reviewed templates'
+lookbacks to 24 hours when it binds each hunt.
+
+Provenance is not fully reproducible from this repository. The committed
+snapshot builder writes `reviewed: false`, and the page builder accepts only
+`reviewed: true`, so the committed pipeline cannot produce the published file
+as-is. The file's top-level `reviewedAt` (2026-10-24T18:47:18Z) falls after the
+18:45:04Z deadline it records, while its queries ran at 18:35. Each of its 27
+`queryTemplateSha256` values matches the corresponding template in the pinned
+`detections/catalog.json`, and `operator/test/hunts.test.mjs` asserts this. The
+committed `runHunts` records a response over the 1-MiB bound as `failed` with that
+message, never as `unavailable`, so the seven 1-MiB `unavailable` entries in the
+snapshot were not produced by this code. How the published file was generated is
+not established.
 
 Infrastructure entry: [operator.bicep](../infra/operator.bicep). Compiled modules
 can be deployed individually through the authenticated ARM integration. AVM was
 evaluated first; compact native Bicep is used here to avoid multi-megabyte optional
 module expansions in this deployment channel and keep every privilege explicit.
 
-The publisher is one outbound-only, pinned-image, 1-CPU/2-GiB container, using a
-temporary identity scoped to the operator group plus metadata-only subscription
-reads. It verifies the protected runtime before extraction and uses managed
-identity code publishing, never a publishing password, storage key or SAS.
+The publisher is one outbound-only, pinned-image, 1-CPU/2-GiB container. It runs as a
+user-assigned identity in an invocation-scoped helper resource group tagged
+`dojo.temporary=true`. Its grants are Contributor on the operator resource group,
+Reader on the private-live resource group only when one is named, Website Contributor
+on the public app only when public walkthrough publication is requested, and the
+`php2proof-operator-metadata` role (three read actions, defined by the operator stack)
+at subscription scope. The repository does not automate removal of the helper group,
+its identity or these role assignments after the worker finishes; that removal is a
+manual step. The publisher verifies the protected runtime before extraction and uses
+managed identity code publishing, never a publishing password, storage key or SAS.
 Control-plane deployment success is not worker success or application readiness.
 
 New Key Vault operations, Storage, Private Link, DNS, traffic and ingestion are

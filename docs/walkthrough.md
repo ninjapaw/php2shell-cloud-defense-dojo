@@ -42,7 +42,7 @@ outcomes against it. The complete public recording is linked from the guide at
 - Measured: five HTTP **200** responses, five ingested **synthetic** application
   records, and the actual `DojoBenignMarker` WAF match. `Block` with `detection`
   mode and HTTP 200 is **not enforced blocking**.
-- Defender: AppServices, CloudPosture and Containers were observed **Standard**.
+- Defender: AppServices, CloudPosture and Containers read **Standard** when the capture was collected at 16:36:07 UTC, after the run. The capture records no enablement date, so run-time plan state is unknown.
   Four existing posture assessments were **Healthy**; these are not alerts or
   necessarily paid-CSPM-exclusive benefits. The exact-app/time-window provider
   workload-alert query succeeded and returned **no records**.
@@ -153,7 +153,8 @@ screenshots or records returned by Defender.
 | Sentinel plus analytics | Possible Informational **synthetic** correlation alert when the query matches | A Defender detection or automatic incident |
 
 For a real alert, open **Defender for Cloud -> Security alerts**, filter the exact
-resource and UTC window, and retain only returned ID/title/severity/evidence/status.
+resource and a UTC window padded on both sides of the run, and retain only
+returned ID/title/severity/evidence/status.
 Keep assessments/recommendations separate. For the optional Sentinel rule, use
 its actual configuration and query/health results; the illustrated rule card is
 not proof of evaluation. Do not publish tenant alert data or screenshots without
@@ -170,9 +171,9 @@ to create a "without" screenshot.
 | --- | --- | --- | --- |
 | Front Door WAF + diagnostics | Not a supported removal mode; they are the base lesson | Real request evaluation and delivered edge/app logs | Always provisions these for the public lab; paid Defender plans are not required for them |
 | Foundational CSPM | Absence of paid CSPM does not remove all posture capabilities | Free supported inventory, recommendations, and posture information can still exist | Does not claim that Free means "no security" |
-| Paid Defender CSPM | Use actual Azure configuration, available foundational recommendations, and manual log correlation | Supported security graph, risk prioritization, Cloud Security Explorer, and attack paths | Explicit `--enable-defender-cspm` requests subscription-wide `CloudPosture` Standard; no other Defender plan is enabled |
+| Paid Defender CSPM | Use actual Azure configuration, available foundational recommendations, and manual log correlation | Supported security graph, risk prioritization, Cloud Security Explorer, and attack paths | Explicit `--enable-defender-cspm` requests subscription-wide `CloudPosture` Standard; the dojo enables no other Defender plan, and other plans may already be Standard on the subscription |
 | CSPM Serverless protection | Standard pricing alone is not proof of enabled coverage or a completed Web App scan | Supported Web App/Function discovery and posture with the component enabled | Does not validate this component's setting, assessment completion, or specific CVE coverage; verify them separately |
-| Defender for App Service | No expectation of App Service workload-protection alerts from a disabled plan | Separate plan-specific detections and context for supported features/platforms | Not enabled by the lab's CSPM flag; safe fixture requests are not guaranteed triggers; no MDE process tables are supplied |
+| Defender for App Service | Plan off: no App Service workload-protection alerts expected from the fixtures | Separate plan-specific detections and context for supported features/platforms | Not set by the lab (its CSPM flag requests CloudPosture only). When the capture was taken, shortly after run 92ad189c, the plan read Standard; the capture records no enablement date, so whether the plan was on during that run is not established. Safe fixture requests are not guaranteed triggers; no MDE process tables are supplied |
 | Defender for Servers / MDE | No real process/network endpoint telemetry in this PaaS design | Real telemetry from a supported, actually onboarded machine | No VM in the base lab; enabling a plan does not make App Service an MDE device |
 | Defender for Containers | Public App Service lesson unchanged | Supported private AKS/registry assessments and workload telemetry in the separate track | Separate lab requires existing plans and validates its actual cluster/image/sensors; no public exploit endpoint |
 | Microsoft Sentinel | Hunt directly in Log Analytics; no Sentinel incident or rule expected | Workspace investigation and optional scheduled analytics | `--enable-sentinel` installs one disabled Informational synthetic rule |
@@ -300,8 +301,14 @@ four attack detections, and an error-channel synthetic event is not compromise.
 ## 3. Build the evidence timeline
 
 Open **Logs** on the exact lab workspace. Set `RunIdFilter` in the
-[six lab queries](../detections/README.md), review the UTC window, and replace
-`__APP_RESOURCE_ID__` in [correlation](../detections/correlation.kql).
+[six lab queries](../detections/README.md) and replace `__APP_RESOURCE_ID__` in
+[correlation](../detections/correlation.kql). The queries take no UTC window.
+Each looks back one hour from the moment it runs (`ago(1h)`, or `Window` in the
+WAF query); edit that value to widen it. Correlation also keeps a run only if
+its latest app event was ingested within 15 minutes (`LastIngested > ago(15m)`),
+so a later empty result does not prove absence. If you narrow the time range by
+hand, pad it on both sides: in the historical capture, the WAF row was stamped
+0.463 s before the recorded start.
 
 1. [WAF requests](../detections/waf-requests.kql): inspect the real rule, action,
    request URI, resource ID, tracking reference, host, client IP, and time.
@@ -392,7 +399,7 @@ Do not invent an alert, incident, or completion time for the narrative.
 
 Continue into the [official PHP2Shell response workflow](response.md) for the
 downloadable/portal scripts, three independently staged Log-to-Block request
-policies, response rule99006001 availability and its deliberately absent logs,
+policies, response rule 99006001 availability and its deliberately absent logs,
 and actual PHP patch verification. The linked Microsoft guidance is the source;
 the harmless marker below is not a CVE signature. The response controls default
 off and do not renew an expired window or grant IAM permissions.

@@ -140,6 +140,7 @@ function walkthrough_end(int $index, array $chapters): void {
         <h3 id="baseline"><span id="baseline-title">Validate before replaying</span></h3>
         <p>Use an approved owned dev lab. Read <a href="/health.php">health JSON</a>; run <code>plan</code>, <code>doctor</code>, <code>validate</code>. Origin must stay 403 even with copied FDID. No extra app roles. Stop on ownership/HTTPS/origin failures.</p>
         <h3 id="request"><span id="request-title">Generate a bounded run</span></h3>
+        <p>Set <code>DOJO_SUFFIX</code> and <code>AZURE_SUBSCRIPTION_ID</code> first.</p>
         <pre><code>bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
         <p>Five benign requests share a new UUIDv4; only the first carries <code>dojoProbe=waf-marker</code>. Save the run/UTC window. Detection: five HTTP 200s. No command, payload, arbitrary destination, or browser run control.</p>
         <p>Expiry is not deletion; the log cap is not a budget.</p>
@@ -194,7 +195,7 @@ function walkthrough_end(int $index, array $chapters): void {
       <p class="number">HISTORICAL CAPTURE / NOT LIVE</p>
       <p><a href="https://php2proof.ninjapaws.org/evidence/92ad189c-9a88-4403-b773-52453963e4b8">Historical reference capture</a>, not your new deployment's logs.</p>
       <p><code><?= escape($recordedRun['id']) ?></code>: <?= escape($recordedRun['startedAt']) ?> to <?= escape($recordedRun['endedAt']) ?>; collected <?= escape($recordedRun['capturedAt']) ?> (UTC).</p>
-      <p><strong>Baseline:</strong> five HTTP 200s / five synthetic records. Block/Detection is <strong>not enforced blocking</strong>. <strong>Defender:</strong> AppServices/CloudPosture/Containers Standard. The direct provider alert query succeeded and returned <code>[]</code> for the exact app/window. Four Healthy assessments are not four detections, not necessarily exclusive to paid CSPM.</p>
+      <p><strong>Baseline:</strong> five HTTP 200s / five synthetic records. Block/Detection is <strong>not enforced blocking</strong>. <strong>Defender:</strong> AppServices/CloudPosture/Containers read Standard after the run; run-time plan state is unknown. The direct provider alert query succeeded and returned <code>[]</code> for the exact app/window. Four Healthy assessments are not four detections, not necessarily exclusive to paid CSPM.</p>
       <p><strong>Not a Defender-disabled control run.</strong> References are not fired alerts; missing alerts are not proof of safety.</p>
       <details><summary>Alerts and expected results</summary>
       <h3 id="alerts"><span id="alerts-title">The alert queue is not the log stream</span></h3>
@@ -215,7 +216,7 @@ function walkthrough_end(int $index, array $chapters): void {
       </details>
       <details><summary>Queries, timeline and hunting results</summary>
       <h3 id="correlate"><span id="correlate-title">Build the evidence timeline</span></h3>
-      <p>In workspace Logs, set <code>RunIdFilter</code> and UTC window. WAF records use <code>AzureDiagnostics</code>; PHP events use <code>AppServiceConsoleLogs</code>. Run <code>detections/waf-requests.kql</code> and <code>correlation.kql</code>, replacing <code>__APP_RESOURCE_ID__</code>.</p>
+      <p>In workspace Logs, set <code>RunIdFilter</code>; queries look back 1 h. WAF records use <code>AzureDiagnostics</code>; PHP events use <code>AppServiceConsoleLogs</code>. Run <code>detections/waf-requests.kql</code> and <code>correlation.kql</code>, replacing <code>__APP_RESOURCE_ID__</code>.</p>
       <p>Check rule/action, request/reference, resource/time, <code>synthetic: true</code>. No <code>DeviceProcessEvents</code>/<code>DeviceNetworkEvents</code>. Ingestion does not make fixtures real.</p>
       <p><a href="https://php2proof.ninjapaws.org/evidence/hunting">Open all hunting queries, captured results and additional-value walkthroughs</a> (central historical reference).</p>
       </details>
@@ -240,15 +241,15 @@ function walkthrough_end(int $index, array $chapters): void {
       <p>Expected after an approved change in your own lab, not a captured after-state:</p>
       <pre><code>bash scripts/dojo.sh protect --environment dev --yes
 bash scripts/dojo.sh simulate --environment dev --yes</code></pre>
-      <p class="walkthrough-check"><strong>Prevention:</strong> marker 403, four other signals 200. Normal traffic must work; origin stays403.</p>
-      <p><a href="https://php2proof.ninjapaws.org/evidence/response">Official response and scripts</a>: stage three request rules in Log first. Response rule99006001 has no WAF hits/logs. WAF mitigation is not a PHP patch.</p>
+      <p class="walkthrough-check"><strong>Prevention:</strong> marker 403, four other signals 200. Normal traffic must work; origin stays 403.</p>
+      <p><a href="https://php2proof.ninjapaws.org/evidence/response">Official response and scripts</a>: stage three request rules in Log first. Response rule 99006001 has no WAF hits/logs. WAF mitigation is not a PHP patch.</p>
     <?php walkthrough_end(7, $chapters); ?>
 
     <?php walkthrough_start(8, $chapters); ?>
       <pre><code>bash scripts/dojo.sh remediate --environment dev --yes
 bash scripts/dojo.sh validate --environment dev</code></pre>
-      <p>Fixed: five signals404 <strong>without the WAF marker</strong>; health200, origin403. Repair preserves fixed/Prevention/expiry. Fixture removal is not a PHP patch.</p>
-      <p><a href="https://php2proof.ninjapaws.org/evidence/response#response-closure">Resolution script and closure checks</a>: verify running PHP8.4.27+, rebuild images, inspect findings. Approved window required; no after-state is claimed.</p>
+      <p>Fixed: five signals 404 <strong>without the WAF marker</strong>; health 200, origin 403. Repair preserves fixed/Prevention/expiry. Fixture removal is not a PHP patch.</p>
+      <p><a href="https://php2proof.ninjapaws.org/evidence/response#response-closure">Resolution script and closure checks</a>: verify running PHP 8.4.27+, rebuild images, inspect findings. Approved window required; no after-state is claimed.</p>
     <?php walkthrough_end(8, $chapters); ?>
 
     <?php walkthrough_start(9, $chapters); ?>

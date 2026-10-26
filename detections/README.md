@@ -14,7 +14,10 @@ missing optional columns. Warnings and empty results must be investigated.
 | `canary-access.kql` | In-code fabricated fixture access; no cloud secret or data-plane read |
 | `correlation.kql` | Real WAF + multiple synthetic app signals, optionally enriched with exported assessment rows |
 
-Set `RunIdFilter` and review the UTC window. For correlation, replace
+Set `RunIdFilter`. The queries take no UTC window: each looks back one hour
+from when it runs (`ago(1h)`, or `Window` in the WAF query). `correlation.kql`
+also keeps a run only if its latest app event was ingested within 15 minutes
+(`LastIngested > ago(15m)`). For correlation, replace
 `__APP_RESOURCE_ID__` with the exact deployed App Service resource ID. Resource
 IDs, hostnames, client IPs, identities, device IDs, and timestamps are pivots,
 not independent evidence of compromise. A single event never establishes it.

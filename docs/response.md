@@ -12,12 +12,12 @@ supplementary mitigation.** `LAB_STATE=fixed` removes harmless fixtures only.
 ## Evidence contract and execution authorization
 
 Start with the existing [recording](https://php2proof.ninjapaws.org/walkthrough.php#recorded)
-and [hunting results](https://php2proof.ninjapaws.org/evidence/hunting). The real
-16:33 UTC GhostPaw baseline has five HTTP200s, five ingested synthetic app records,
-a Block/Detection WAF marker and no returned scoped provider alerts. The 18:35
-hunting capture has three queried, 18 unavailable and six not-applicable cases.
+and [hunting results](https://php2proof.ninjapaws.org/evidence/hunting). The recorded
+16:33 UTC GhostPaw baseline has five HTTP 200s, five ingested synthetic app records,
+a WAF row recorded as `Action: Block` under `WafMode: detection` (all five requests returned 200; the walkthrough states that Block/Detection is not enforced blocking), and a scoped provider-alert query that returned zero rows. The 18:35
+hunting snapshot has three queried, 18 unavailable and six not-applicable cases.
 Healthy assessments and an empty alert query are not patch or compromise clearance.
-All observed Defender plans were Standard; no disabled-Defender experiment occurred.
+The capture read AppServices, CloudPosture and Containers as Standard after the run; it records no enablement date, so run-time plan state is unknown. No disabled-Defender experiment occurred.
 
 The original deadline is **2026-10-24T18:45:04.967Z**. The authorization question
 for a new live response window could not be answered, so it was not renewed.
@@ -56,7 +56,7 @@ guarantees an alert, automatically patches PHP, or substitutes for forensic work
 Use Node24 with Azure CLI on Linux/macOS or WSL2. Authenticate using an already
 authorized identity and explicitly select the exact public-cloud subscription.
 The same commands work with `node scripts/response.mjs` in this checkout, or
-`node php2proof-response.mjs` after downloading the bundle.
+`node php2proof-response.mjs` after downloading the bundle. Set `DOJO_SUFFIX` and `AZURE_SUBSCRIPTION_ID` first; the commands below pass them as flags through shell expansion, because `response.mjs` does not read `DOJO_SUFFIX` or `AZURE_SUBSCRIPTION_ID`.
 
 ```bash
 node scripts/response.mjs plan --environment dev \
@@ -132,8 +132,8 @@ They are heuristics for the selected paths, not universal exploit signatures.
 New PHP routes require a separately reviewed scope update. Unit fixtures test
 19/20/21-level boundaries; they are not evidence of live Azure WAF enforcement.
 
-Prove the existing benign marker becomes403 while normal health stays200 and
-origin access remains403. Actual request-rule validation must inspect matching
+Prove the existing benign marker becomes 403 while normal health stays 200 and
+origin access remains 403. Actual request-rule validation must inspect matching
 real WAF events and legitimate application behavior, not just configuration.
 
 ## 4. Response-side mitigation and its deliberately absent logs
@@ -144,7 +144,7 @@ It requires an **already reviewed** DRS2.0/2.1/2.2 with Block anomaly policy. It
 does not install a DRS or change other managed-rule actions/exclusions.
 
 The exact group is `MS-ThreatIntel-Response-CVEs`, rule **99006001**. The rule is
-disabled by default, and Microsoft expects rollout through October28. Absence or
+disabled by default, and Microsoft expects rollout through October 28. Absence or
 catalogue-read failure is explicit unavailable state, not successful enablement.
 The action enables this override with `AnomalyScoring`, corresponding to the
 prescribed anomaly action, without forcing a conventional immediate request block.
@@ -158,7 +158,7 @@ separate from actual compromise detection. PHP still needs updating.
 Other platforms are referenced, not selected as portal execution targets:
 
 - **Application Gateway v2:** apply the official conditional Set-Cookie rewrite,
-  using the October22 corrected expression and actual route association. Do not
+  using the October 22 corrected expression and actual route association. Do not
   delete every Set-Cookie header. Test non-production compatibility.
 - **Application Gateway for Containers:** request custom rules; no regex-based
   response rewrite today. No new gateway or container environment is provisioned.
@@ -173,7 +173,7 @@ the applicable vendor.
 
 For this managed App Service, `PHP|8.4` selects a branch, not a full patch. Check
 the actual trusted health `phpVersion`. A restart or reselecting that branch is
-not proof that8.4.27 is deployed. If Microsoft's managed runtime is below the
+not proof that 8.4.27 is deployed. If Microsoft's managed runtime is below the
 baseline, obtain the platform update or separately review a patched deployment
 option. The portal does not claim a nonexistent customer-controlled exact-patch
 API or silently convert the lab to a container/VM.
@@ -192,10 +192,10 @@ node scripts/response.mjs verify --environment dev \
 
 The verification returns actual runtime, HTTP, identity and UTC evidence:
 
-1. Trusted public health200 identifies the exact app/runtime/state.
-2. All five **unmarked** fixture inputs are404.
-3. The harmless marked request is403 under Prevention.
-4. Origin403 is required both without and with copied FDID.
+1. Trusted public health 200 identifies the exact app/runtime/state.
+2. All five **unmarked** fixture inputs are 404.
+3. The harmless marked request is 403 under Prevention.
+4. Origin 403 is required both without and with copied FDID.
 5. Public PHP identity has zero direct/inherited grants.
 6. Actual full PHP version meets the reviewed branch threshold.
 
@@ -221,11 +221,11 @@ simulated by the fixture or performed automatically by this portal.
 ## Packaging
 
 ```bash
-node operator/build-response.mjs <new-artifact-directory>
+node operator/build-response.mjs response-artifact   # output directory; must not already exist
 ```
 
 The deterministic gzip overlay contains only seven fixed runtime/script paths,
-is checksummed and must fit the unchanged61,440-byte protected-input cap. Its
+is checksummed and must fit the unchanged 61,440-byte protected-input cap. Its
 readable standalone script keeps vendored MIT attribution and suppresses imported
 libraries' CLI entry guards. Do not minify it into an opaque downloader.
 
@@ -233,11 +233,12 @@ The overlay must be installed after a full core deployment, alongside the
 separate hunting overlay. Preserve SDK dependencies and reviewed evidence
 (`clean=false`). It does not set app settings, grant roles, initialize credentials,
 extend expiry, execute a response or automatically publish private results.
-The existing bounded operator publisher accepts only the exact seven paths for
-the `response-maintenance` kind. Its original full-release expiry rejection is
-unchanged; code maintenance does not authorize new jobs or make an expired
-login succeed. Publication still needs an independently authorized publisher;
-the initial unanswered question did not authorize runtime writes or renewal.
+The bounded publisher, `operator/publish-hunts.sh`, accepts only the exact seven
+paths for the `response-maintenance` kind and rejects any other file set. Its
+expiry check applies only to full `release` kinds. Publishing signs in as the
+managed identity named by `PUBLISHER_CLIENT_ID` and does not renew the lab,
+initialize credentials, write app settings or authorize new jobs. Expired operator
+sessions and credentials still fail at runtime.
 The subsequently published code is available in the
 [public response guide](https://php2proof.ninjapaws.org/evidence/response) and its
 [readable script download](https://php2proof.ninjapaws.org/evidence/response/script).
@@ -246,12 +247,12 @@ not inferred from successful code deployment.
 
 Code publication can additionally use `public-walkthrough-maintenance`, containing
 only the reviewed PHP walkthrough and writing only `walkthrough.php` with
-`clean=false`. Temporary Website Contributor is scoped to the exact public app,
-not the main resource group. No protection, runtime, domain or expiry setting is
+`clean=false`. Website Contributor is scoped to the exact public app,
+not the main resource group, and it must be removed after the worker completes. No protection, runtime, domain or expiry setting is
 changed by that publication.
 
 Publication uses protected ARM parameters, never storage keys, SAS or copied
 tokens. Before installing operator code, the publisher requires credential
 initialization, one-time hunting capture and response writes to remain disabled.
 All temporary source data, identities and grants must be removed after actual
-worker completion; do not weaken private-network policy to move source files.
+worker completion. This repository does not automate that removal for the operator publisher; do not weaken private-network policy to move source files.

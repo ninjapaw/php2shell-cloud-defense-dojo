@@ -142,8 +142,9 @@ content hashes and upstream MIT attribution included under [vendor/](vendor/).
 Pawton's plan/doctor/deploy/repair/uninstall pattern informed the lifecycle.
 
 The only optional subscription-wide resource is **Defender `CloudPosture`
-Standard**, enabled only with `--enable-defender-cspm`. No other Defender plan is
-enabled. The app has a system-assigned managed identity with **zero role grants**.
+Standard**, enabled only with `--enable-defender-cspm`. The dojo enables no other Defender plan. Other plans may already be Standard on the
+subscription; check them in Defender for Cloud before reading a run as plan-specific.
+The app has a system-assigned managed identity with **zero role grants**.
 No passwords or certificates are generated, so no Key Vault is needed initially.
 Any future generated secret must use Key Vault, not deployment outputs or files.
 
@@ -168,16 +169,16 @@ zone. Set `DOJO_CUSTOM_DOMAIN` (or the optional `customDomain` in
 The configured story hostname is **`php2proof.ninjapaws.org`** in the Cloudflare
 zone **`ninjapaws.org`**. This setting declares the requested domain; it does not
 claim DNS ownership, route/WAF association, or managed TLS is ready. The default
-Azure endpoint remains available while the custom domain is activated.
+Azure endpoint remains available while the custom domain is activated. Set `DOJO_SUFFIX` and `AZURE_SUBSCRIPTION_ID` for this lab first. The commands below pass the suffix explicitly, and `domain` and `domain-check` also pass the subscription.
 
 ```bash
 export DOJO_CUSTOM_DOMAIN=php2proof.ninjapaws.org
 export CLOUDFLARE_ZONE_NAME=ninjapaws.org
-bash scripts/dojo.sh plan --environment dev
+bash scripts/dojo.sh plan --environment dev --suffix "$DOJO_SUFFIX"
 # Load CLOUDFLARE_API_TOKEN securely into the environment; never pass it as an argument.
 # Alternatively, set CLOUDFLARE_ZONE_ID for this exact authorized zone.
-bash scripts/dojo.sh domain --environment dev --yes
-bash scripts/dojo.sh domain-check --environment dev
+bash scripts/dojo.sh domain --environment dev --suffix "$DOJO_SUFFIX" --subscription "$AZURE_SUBSCRIPTION_ID" --yes
+bash scripts/dojo.sh domain-check --environment dev --suffix "$DOJO_SUFFIX" --subscription "$AZURE_SUBSCRIPTION_ID"
 ```
 
 For manual Cloudflare entry, the record names below are relative to your zone:
