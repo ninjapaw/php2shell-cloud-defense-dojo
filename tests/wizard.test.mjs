@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkPrerequisites, invocationFor, runWizard, validateProfile } from "../scripts/wizard.mjs";
+import { WIZARD_ACTIONS, checkPrerequisites, invocationFor, runWizard, validateProfile } from "../scripts/wizard.mjs";
+import { parseInvocation } from "../scripts/lib/config.mjs";
 
 const subscription = "11111111-1111-4111-8111-111111111111";
 const profile = () => ({
@@ -61,6 +62,29 @@ test("profiles reject production, secrets, unknown keys, DNS adoption and invali
     { ...profile(), suffix: "../bad" },
   ]) assert.throws(() => validateProfile(value));
   assert.throws(() => invocationFor(profile(), "arbitrary command"), /fixed wizard/);
+});
+test("wizard opt-ins reach only the commands the CLI allows", () => {
+  const billable = { ...profile(), features: { enableDefenderCspm: true, enableSentinel: true, enableAnalytics: true } };
+  const optIns = (invocation) => [invocation.enableDefenderCspm, invocation.enableSentinel, invocation.enableAnalytics];
+  for (const command of ["plan", "doctor", "deploy", "repair", "protect", "remediate"]) {
+    assert.deepEqual(optIns(invocationFor(billable, command)), [true, true, true], command);
+  }
+  for (const command of ["validate", "simulate", "investigate", "uninstall"]) {
+    assert.deepEqual(optIns(invocationFor(billable, command)), [false, false, false], command);
+  }
+});
+test("wizard billable opt-ins agree with the CLI guard for every action", () => {
+  const billable = { ...profile(), features: { enableDefenderCspm: true, enableSentinel: true, enableAnalytics: true } };
+  for (const [command] of WIZARD_ACTIONS.filter(([id]) => id !== "exit")) {
+    let cliAccepts = true;
+    try {
+      parseInvocation([command, "--subscription", subscription, "--suffix", "wizard42", "--environment", "dev", "--enable-sentinel"], profile().settings, {});
+    } catch (error) {
+      if (!/Billable deployment opt-ins/.test(error.message)) throw error;
+      cliAccepts = false;
+    }
+    assert.equal(invocationFor(billable, command).enableSentinel, cliAccepts, command);
+  }
 });
 test("missing or old Bicep installs only after explicit local-component approval", async (t) => {
   const h = harness(t);

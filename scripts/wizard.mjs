@@ -55,11 +55,15 @@ export function loadProfile(path) {
   return validateProfile(value);
 }
 
+// Must match the CLI opt-in guard in lib/config.mjs; the wizard test checks both.
+const BILLABLE_OPT_IN_COMMANDS = ["plan", "doctor", "deploy", "repair", "protect", "remediate"];
+
 export function invocationFor(profile, command) {
   if (!WIZARD_ACTIONS.some(([id]) => id === command) || command === "exit") throw new Error("Unknown fixed wizard action.");
   const p = validateProfile(profile);
   const base = parseInvocation([command, "--subscription", p.subscription, "--suffix", p.suffix, "--environment", "dev"], p.settings, {});
-  return { ...base, ...p.features, yes: false };
+  const features = BILLABLE_OPT_IN_COMMANDS.includes(command) ? p.features : {};
+  return { ...base, ...features, yes: false };
 }
 
 function parseJson(text, context) {
