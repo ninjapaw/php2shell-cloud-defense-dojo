@@ -506,9 +506,10 @@ additional prerequisites, isolation, permission, and cost boundaries.
   public site's Cloudflare target. Do not change another existing private run.
 - Validate actual serving versions, image digests, ready sensors, and observed
   assessment evidence. A configured sensor is not a completed scan.
-- `test-detection` runs only `id` through the authorized Kubernetes control
-  plane. It is real administrative activity, not exploitation and **not a
-  guaranteed Defender alert**.
+- `test-detection` runs the same checks as `validate`, then one additional
+  process, `id`, through the authorized Kubernetes control plane. It is real
+  administrative activity, not exploitation and **not a guaranteed Defender
+  alert**.
 - Inspect actual CVE/package/version/digest details. OS findings are not
   automatically PHP2Shell findings; absent CVEs are not a clearance. Remediation
   changes the serving digest, while prior images remain until explicit teardown.

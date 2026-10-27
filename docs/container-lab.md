@@ -210,10 +210,11 @@ npm run container:lab -- test-detection --yes
 npm run container:lab -- investigate
 ```
 
-`test-detection` executes only `id` through the authorized Kubernetes control
-plane. It exercises actual audit/process telemetry without an application
-exploit. **It is not a guaranteed Defender detection trigger.** The official
-[Microsoft simulator](https://learn.microsoft.com/azure/defender-for-cloud/alerts-containers#kubernetes-alerts-simulation-tool)
+`test-detection` runs the same checks as `validate`, then one additional
+process in the pod, `id`, through the authorized Kubernetes control plane and
+requires uid 10001. It exercises actual audit/process telemetry without an
+application exploit. **It is not a guaranteed Defender detection trigger.**
+The official [Microsoft simulator](https://learn.microsoft.com/azure/defender-for-cloud/alerts-containers#kubernetes-alerts-simulation-tool)
 uses a webshell even for other scenarios; this lab does not automatically
 install it or represent ordinary administrative execution as compromise.
 Neither an informational marker nor a sample alert proves exploitation.

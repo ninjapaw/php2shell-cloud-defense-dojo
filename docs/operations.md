@@ -78,8 +78,10 @@ for the job. Omission never registers providers or changes security pricing.
 The temporary identity has Contributor only at the
 configured main group, narrowly enumerated subscription deployment/metadata
 actions. There are no source-account data-role grants. The app identity still
-has no role grants. Redacted, output-only deployment records preserve actual
-success/failure results; a missing report is not success.
+has no role grants. Failure messages are redacted and truncated to 1,600
+characters before storage. Successful output-only deployment records store the
+result object without that failure-message pass; a missing report is not
+success.
 CLI failures identify the command family without printing its parameter values
 or retaining an unredacted exception cause.
 The CLI adapter maps `webapp show`'s `appServicePlanId` to the ARM
