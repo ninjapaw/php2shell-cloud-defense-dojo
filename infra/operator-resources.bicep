@@ -158,11 +158,16 @@ resource appsettings 'Microsoft.Web/sites/config@2025-03-01' = {
     OPERATOR_INITIALIZE_ID: initializeId
   }
 }
-resource publishing 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2025-03-01' = [for policy in ['ftp', 'scm']: {
+resource ftpPublishing 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2025-03-01' = {
   parent: site
-  name: policy
+  name: 'ftp'
   properties: { allow: false }
-}]
+}
+resource scmPublishing 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2025-03-01' = {
+  parent: site
+  name: 'scm'
+  properties: { allow: false }
+}
 
 resource verifier 'Microsoft.KeyVault/vaults/secrets@2025-05-01' existing = {
   parent: keyVault

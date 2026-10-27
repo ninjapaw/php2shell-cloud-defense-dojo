@@ -30,6 +30,8 @@ resource cleanup 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, windowId, 'private-live-cleanup')
   properties: { principalId: cleanupPrincipalId, principalType: 'ServicePrincipal', roleDefinitionId: cleanupRoleId }
 }
+// Dedicated resource-specific tables require the newer diagnostic schema.
+#disable-next-line use-recent-api-versions
 resource audit 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'private-live-audit'
   scope: cluster

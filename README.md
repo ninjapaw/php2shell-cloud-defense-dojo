@@ -27,6 +27,11 @@ does not make the lab suitable for production workloads or real sensitive data.
 The live site uses App Service's default (production) slot; `dev` is the lab's
 logical environment, not a staging-slot indicator.
 
+`main` is the only persistent source branch. Run the existing manual lifecycle
+workflows from `main`; `dev` remains the isolated lab environment, not a Git
+branch. Branch consolidation does not enable simulations, Defender plans,
+Sentinel, or other billable options.
+
 ## Start the guided walkthrough
 
 Open **Walkthrough** in the dashboard navigation, or visit `/walkthrough.php`

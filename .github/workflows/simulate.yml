@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   simulate:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: dev
     timeout-minutes: 10

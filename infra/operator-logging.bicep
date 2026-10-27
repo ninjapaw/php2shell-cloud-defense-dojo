@@ -12,6 +12,8 @@ resource logs 'Microsoft.Web/sites/config@2025-03-01' = {
     httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 25 } }
   }
 }
+// Dedicated resource-specific tables require the newer diagnostic schema.
+#disable-next-line use-recent-api-versions
 resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'operator-to-workspace'
   scope: site
