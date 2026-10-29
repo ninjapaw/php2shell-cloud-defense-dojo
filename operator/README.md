@@ -132,7 +132,6 @@ redacted candidate is explicitly reviewed.
 
 Activation is out of band and requires all of the following:
 
-- `OPERATOR_LIVE_ENABLED=true`.
 - `OPERATOR_LIVE_WINDOW`: an exact six-field JSON document containing
   `schemaVersion=1`, a fresh UUID `id`, UTC `notBefore`/`expiresAt`, exact
   `resourceGroup=rg-p2sc-SUFFIX-dev`, and `autoTeardown=true`. Maximum four hours.
@@ -242,6 +241,12 @@ npm --prefix operator run build:runtime -- C:\path\to\new-session-artifact-direc
 ```
 
 The build uses a pinned, build-only minifier and a production-only locked manifest.
+Its pinned, build-only Zopfli compressor produces standard gzip and keeps source
+ahead of package metadata to fit the existing transport budget without removing
+runtime files or dependency integrity records. Neither build tool ships in the
+production dependency manifest. `npm test` builds the actual runtime offline and
+checks the complete file set, production dependency versions, SHA-256, chunk
+sizes and combined protected-input limit.
 The resulting runtime is independently SHA-256 verified and tested. Its allowlist,
 sixteen-chunk maximum and combined 60-KiB protected-input bound are not expanded.
 No `.env`, tests, credentials, arbitrary files or private container lab are shipped.

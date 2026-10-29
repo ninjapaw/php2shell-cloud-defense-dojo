@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync, mkdirSync, lstatSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { gzipAsync } from "@gfx/zopfli";
 import { transformSync } from "esbuild";
 
 export const RUNTIME_FILES = Object.freeze([
@@ -32,7 +32,9 @@ const install = spawnSync(process.execPath, [
 ], { encoding: "utf8", timeout: 120_000, maxBuffer: 1_048_576, shell: false });
 if (install.status !== 0 || install.error) throw new Error("Production-only locked runtime manifest generation failed.");
 const files = {};
-for (const name of RUNTIME_FILES.toSorted()) {
+// Keep source together so lockfile metadata does not evict it from gzip's dictionary.
+const paths = RUNTIME_FILES.toSorted().toSorted((left, right) => Number(right.endsWith(".mjs")) - Number(left.endsWith(".mjs")));
+for (const name of paths) {
   const path = join(root, ...name.split("/"));
   if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) throw new Error("Runtime source must contain only regular allowlisted files.");
   let text = readFileSync(path, "utf8");
@@ -44,7 +46,7 @@ for (const name of RUNTIME_FILES.toSorted()) {
   }).code;
   files[name] = text;
 }
-const content = gzipSync(JSON.stringify({ schemaVersion: 1, files }), { level: 9, memLevel: 9 });
+const content = Buffer.from(await gzipAsync(Buffer.from(JSON.stringify({ schemaVersion: 1, files })), { numiterations: 15 }));
 const encoded = content.toString("base64");
 if (encoded.length + 2 > 61_440) throw new Error(`Runtime exceeds the unchanged protected-source cap (${encoded.length + 2}/61440). No truncated output is emitted.`);
 const sha256 = createHash("sha256").update(content).digest("hex");
