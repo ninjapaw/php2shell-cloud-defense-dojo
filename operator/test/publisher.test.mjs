@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 import { runTool } from "../../scripts/lib/azure.mjs";
 
- test("the actual production runtime stays complete and inside the publisher's unchanged protected-source cap", {
+test("the actual production runtime stays complete and inside the publisher's unchanged protected-source cap", {
   skip: !process.env.npm_execpath && "Run npm test to exercise the documented npm runtime builder.",
 }, (t) => {
   const directory = mkdtempSync(join(tmpdir(), "php2proof-runtime-test-"));
@@ -50,7 +50,7 @@ import { runTool } from "../../scripts/lib/azure.mjs";
   }
 });
 
- test("publisher uses the established gzip Node pin and keeps source bounds/isolated code deployment", () => {
+test("publisher uses the established gzip Node pin and keeps source bounds/isolated code deployment", () => {
   const script = readFileSync(new URL("../publish-runtime.sh", import.meta.url), "utf8");
   const prior = readFileSync(new URL("../../scripts/cloud-deploy.sh", import.meta.url), "utf8");
   const pin = /node_sha256=([a-f0-9]{64})/.exec(script)?.[1];
@@ -70,7 +70,7 @@ import { runTool } from "../../scripts/lib/azure.mjs";
   assert.doesNotMatch(script, /account get-access-token|list-keys|account-key|generate-sas/);
 });
 
- test("publisher archive operations execute using the CLI image's Python standard library, not missing tar/zip binaries", () => {
+test("publisher archive operations execute using the CLI image's Python standard library, not missing tar/zip binaries", () => {
   const script = readFileSync(new URL("../publish-runtime.sh", import.meta.url), "utf8");
   const blocks = [...script.matchAll(/python3[^\n]*<<'PY'\n([\s\S]*?)\nPY/g)].map((match) => match[1]);
   assert.equal(blocks.length, 2);
@@ -100,7 +100,7 @@ print("stdlib archive checks passed")
   assert.match(runTool("python", ["-c", check]), /stdlib archive checks passed/);
 });
 
- test("private owner renewal grants only the exact verifier's data-plane set permission", () => {
+test("private owner renewal grants only the exact verifier's data-plane set permission", () => {
   const root = readFileSync(new URL("../../infra/private-live.bicep", import.meta.url), "utf8");
   const access = readFileSync(new URL("../../infra/private-live-operator-access.bicep", import.meta.url), "utf8");
   const role = root.split("\n").find((line) => line.includes("key: 'verifier'"));
@@ -111,7 +111,7 @@ print("stdlib archive checks passed")
   assert.doesNotMatch(access, /operator-admin-password|operator-admin-username/);
 });
 
- test("expiry cleanup retains completed-pair progress in one bounded stateful run before deleting the group", () => {
+test("expiry cleanup retains completed-pair progress in one bounded stateful run before deleting the group", () => {
   const source = readFileSync(new URL("../../infra/private-live-cleanup.bicep", import.meta.url), "utf8");
   assert.match(source, /RetryRevocation: \{\s+type: 'Until'/);
   assert.match(source, /limit: \{ count: 120, timeout: 'PT1H' \}/);

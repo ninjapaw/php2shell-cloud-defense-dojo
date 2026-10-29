@@ -132,6 +132,7 @@ redacted candidate is explicitly reviewed.
 
 Activation is out of band and requires all of the following:
 
+- `OPERATOR_LIVE_ENABLED=true`.
 - `OPERATOR_LIVE_WINDOW`: an exact six-field JSON document containing
   `schemaVersion=1`, a fresh UUID `id`, UTC `notBefore`/`expiresAt`, exact
   `resourceGroup=rg-p2sc-SUFFIX-dev`, and `autoTeardown=true`. Maximum four hours.
